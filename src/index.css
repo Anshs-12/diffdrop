@@ -178,8 +178,9 @@ body {
 /* ───── Editor Panel (textareas) ───── */
 .editor-panel {
   display: flex;
-  flex: 1;
-  min-height: 0;
+  height: 35%;
+  min-height: 120px;
+  flex-shrink: 0;
   border-bottom: 1px solid var(--border-color);
 }
 
