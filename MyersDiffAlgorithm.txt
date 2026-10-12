@@ -1,0 +1,213 @@
+Myers Diff Algorithm:
+
+    Myers Diff Algorithm is one of the most important and widely used algorithms for finding
+    differences between two versions of a file.
+
+    Modern tools like Git use variations of Myers Diff internally to detect added,
+    removed, and unchanged lines between file versions.
+
+    This algorithm primarly focuses on different aspects of version of the same file where it compares
+    and give the exact changes that arised between the different versions of the files.
+
+    Let's say we have a single file with two versions old and new.
+    oldLines: ['a','b','c'];
+    newLines: ['a','x','c'];
+
+    Now, here a human can directly tell that between the old and new version, line 'b' was deleted and line 'x' was added.
+
+    But as computer and algorithm pov this doesn't work this quickly.
+    This concept is similar or exact to the "Longest Common Subsequence" Problem where the longest common subsequence between two
+    strings are found.(leetcode)
+
+    That problem is purely Dynamic Programming based whihc works at TC: O(N*M)
+    where as Myers algorithm is similar to graphs based problem which works on TC: O((N+M)D), where N is the number of lines
+    and D is the shortest edit distance
+        old length = N
+        new length = M
+
+    Instead of filling the entire DP table, Myers treats the problem as finding the shortest edit path between the two versions.
+    It explores edits level-by-level, similar to BFS, while greedily consuming matching lines diagonally.
+
+    Lets start working on the above example:
+
+    In the graph,
+        - rows = oldLines + 1
+        - columns = newLines + 1
+
+    So, our graph becomes the size of 4 x 4, and usually the graph/algo terminates
+    when we reach the row-1 and column-1 position in the graph which is (3,3) here.
+        or
+    when we reach the bottom-right cell (3,3)
+        or
+    when both pointers fully consume both arrays
+
+    Visual Representation of the graph:
+    Row/Colummns:
+                0     1     2     3
+            0   .     .     .     .
+
+            1   .     .     .     .
+
+            2   .     .     .     .
+
+            3   .     .     .     .
+
+
+    Each cell (r,c) represents:
+        current pointers positioned at || currently comparing  :
+
+        oldLines[r]
+        newLines[c]
+
+    If: oldLines[row]==newLines[column]- move diagonally
+    else: - move right = adding the newLine
+          - move down  = removing the oldLine
+
+    Let's have a walk through the and actually understand:
+    Intially at (0,0) so
+    oldLines[0]==newLines[0] -> 'a'=='a', so we move diagonally
+
+    now we are at (1,1)
+        we notice oldLines[1]!=newLines[1] -> 'b'!='x',
+        so now we have two options to optimally move around:
+            - move right meaning 'x' was added reaching (1,2)
+            - move down meaning 'b' was removed reaching (2,1)
+
+        Exploring (1,2) case:
+            here we move to the right, now
+            we again compare oldLines[1]!=newLines[2] -> 'b'!='c',
+            and now we have two options again
+                - move right to (1,3)
+                    Although moving right is valid, it becomes a worse path
+                    because it increases the number of edits unnecessarily.
+
+                - move down to (2,2) which is valid but deleting 'b'
+
+            So, we move down to (2,2)
+                here again we compare,
+                oldLines[2]==newLines[2] -> 'c'=='c',
+                which is valid, so we move diagonally where we reach (3,3)
+
+
+    Now in the end we reached, (3,3) which basically means we have finished the traversal.
+
+    The path which gives the least number of non-diagonal moves is the most optimally chosen path,
+    here we get 2 non-dignoal moves and 2 digonal moves.(only valid for this above example!)
+
+    In the 2 non-digonal moves, 1 move was deleted(-) and another move was added(+)
+
+    Note: other paths can be explored but result would be same in this problem,
+          but the minimum edit distance would still be 2.
+
+
+    This is how Myers Algorithm works!
+
+IMPORTANT:
+    How Myers Explores Edit Distances:
+
+    Myers algorithm works similarly to BFS traversal.
+
+    Instead of BFS levels representing physical distance from a source node,
+    each level represents the number of edits used so far.
+
+    Where:
+        - moving right  = insertion/addition
+        - moving down   = deletion/removal
+        - moving diagonally = unchanged line (free move)
+
+    At edit distance 0:
+        No insertions or deletions are allowed.
+        So Myers only keeps moving diagonally while lines match.
+
+    At edit distance 1:
+        One insertion or deletion is allowed.
+        Myers explores all possible paths using exactly one edit.
+
+    At edit distance 2:
+        Two edits are allowed.
+        In our example, Myers successfully reaches (3,3),
+        meaning the traversal is complete.
+
+    Since Myers uses BFS-like traversal,
+    the first time the algorithm reaches the destination
+    guarantees the minimum edit distance.
+
+    Therefore, the algorithm immediately stops at edit distance 2
+    without exploring larger edit distances like 3 or 4,
+    because those paths would already be worse solutions.
+
+
+## Understanding the code part of Myers Diff Algorithm:
+
+    Above, we had learnt about how the algorithm actually behaves and works
+    on paper point of view, but now we will dive into the code and understand
+    it completely from scratch.
+
+    Let's take the same example:
+    oldContent = [a,b,c]
+    newContent = [a,x,c]
+
+    Here, first we start running a outer loop which is basically the edit distance loop.
+    This loop starts iterating over all the distances from 0 to maxDistance possible
+    which is total length of the oldContent + newContent length.
+
+    This outer loop, is defined by a variable d in our code which represents the current
+    edit distance being explored.
+
+    For each value of this distance d, we tend to explore all the possible diagonals
+    that are reachable via another loop which is the inside loop being defined using the
+    variable 'k'.
+
+    That is at distance d=0, we can only reach diagonal 0 and move along diagonal 0 as it
+    costs nothing to move if the lines are "unchanged".
+
+    This way when d=1, the possible diagonals if we look mathematically is from -d to +d
+    with an incrementation of +2 for each step. This has been proved via maths, and can
+    be logically be looked even.
+    If the previous distance d was 0, and now its d=1, so we are allowed to move 1 distance each
+    to the right and down from this diagonal 0, whihc makes us reach the diagonal k=-1, and k=1
+
+    This way, at edit distance d=2, we can move from -2 to +2, that is -2,0,+2.
+    As proving mathematically, we understand that previously we reached diagonal cells with
+    k=-1 and k=1, now 1 more possible edit distance is being allowed, so we can move
+    -2 which is right
+    +2 which is down
+    and diagonal 0 which is between them
+
+    This way we are able to cover all the possibilities furhter finding the best possible path.
+
+    Now, at each step first we greedily consume all the diagonals available which basically means
+    if the oldContentValue === newContentValue, so we keep on exploring otherwise we move either of
+    the two directions.
+
+    And at each new distance, we tend to decide the maxium possible value between the right and down
+    values to be stored at that diagonal position, which is the array V[k].
+
+    V[k] basically tells the farthest possible value we had reached on this diagonal.
+
+    While, moving ahead we keep on storing the snapshot of the V[k] array so that we can travel
+    back to construct the path properly.
+
+    Moving down from 0,0 is called as Forward Pass and again coming back via construction is called
+    as Backward Pass.
+
+    The algorithm stops when we reach the goal and at that point we call the construction function
+    which again works in similar fashion.
+
+    The backward pass basically is just a contruction function which builds up the moves array
+    by traversing the V[k] array in reverse order, where each of the value in the moves[] array
+    is a line and the type it was "unchanged", "added" or "deleted".
+
+    First comparing and checking if the oldContentValue === newContentValue, if yes we move to the
+    next diagonal otherwise we move either up or left.
+
+    Now, if we are not able to move either of the ways, we check left and up and move to the
+    diagonal which has the maximum value.
+
+    This way we can reconstruct the path from the goal to the start, again by traversing the diagonals.
+
+    Finally, we return the moves array in by reversing it, so that the path is in the correct order.
+    Then its just printing in the proper order based on the moveType and the value.
+
+
+This is it, entire Myers Diff Algorithm.
