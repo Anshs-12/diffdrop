@@ -32,8 +32,8 @@ const SideBySideView: React.FC<SideBySideViewProps> = ({
   onMergeLeftToRight,
   onMergeRightToLeft,
 }) => {
-  // If hiding unchanged, insert separator rows
-  const rows: (DiffLine | 'separator')[] = [];
+  // If hiding unchanged, insert separator rows. Track original index for merge/nav.
+  const rows: ({ line: DiffLine; origIdx: number } | 'separator')[] = [];
   let lastWasHidden = false;
 
   for (let i = 0; i < lines.length; i++) {
@@ -46,7 +46,7 @@ const SideBySideView: React.FC<SideBySideViewProps> = ({
       continue;
     }
     lastWasHidden = false;
-    rows.push(line);
+    rows.push({ line, origIdx: i });
   }
 
   const contentClass = `diff-line-content${lineWrap ? ' wrap' : ''}`;
@@ -71,7 +71,7 @@ const SideBySideView: React.FC<SideBySideViewProps> = ({
               );
             }
 
-            const line = row;
+            const { line, origIdx } = row;
             let leftClass = '';
             let rightClass = '';
 
@@ -89,11 +89,8 @@ const SideBySideView: React.FC<SideBySideViewProps> = ({
 
             const showMerge = line.type !== 'unchanged';
 
-            // Find original index for merge operations
-            const origIndex = lines.indexOf(line);
-
             return (
-              <tr key={idx} data-diff-line={origIndex}>
+              <tr key={idx} data-diff-line={origIdx}>
                 <td className={`diff-line-num ${leftClass}`}>
                   {line.leftNum ?? ''}
                 </td>
@@ -109,7 +106,7 @@ const SideBySideView: React.FC<SideBySideViewProps> = ({
                         <button
                           className="merge-btn"
                           title="Copy to right"
-                          onClick={() => onMergeLeftToRight(origIndex)}
+                          onClick={() => onMergeLeftToRight(origIdx)}
                         >
                           →
                         </button>
@@ -118,7 +115,7 @@ const SideBySideView: React.FC<SideBySideViewProps> = ({
                         <button
                           className="merge-btn"
                           title="Copy to left"
-                          onClick={() => onMergeRightToLeft(origIndex)}
+                          onClick={() => onMergeRightToLeft(origIdx)}
                         >
                           ←
                         </button>
