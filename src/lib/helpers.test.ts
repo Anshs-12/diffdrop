@@ -1,27 +1,40 @@
 import { describe, expect, it } from 'vitest';
 import { computeDiff, type DiffOptions } from './diffProcessor';
 import { buildLineMarks } from './marks';
-import { buildVisibleRows } from './rows';
+import { buildSplitRows, buildUnifiedRows, foldCount, isFold, unifiedLine, unifiedPart } from './rows';
 import { decodeHash, encodeHash } from './share';
 import { columns, maxColumns } from './textWidth';
 
 const base: DiffOptions = { ignoreWhitespace: false, ignoreCase: false, charLevel: false, ignorePatterns: [] };
 
-describe('buildVisibleRows', () => {
+describe('row models', () => {
   const a = Array.from({ length: 20 }, (_, i) => `l${i}`).join('\n') + '\n';
   const { lines } = computeDiff(a, a.replace('l10\n', 'X\n'), base);
+  const describeRows = (rows: Int32Array) => [...rows].map((v) => (isFold(v) ? `fold${foldCount(v)}` : 'line'));
 
   it('shows every line when not collapsing', () => {
-    expect(buildVisibleRows(lines, false)).toHaveLength(lines.length);
+    const { rows, rowOfLine } = buildSplitRows(lines, false);
+    expect(rows).toHaveLength(lines.length);
+    expect([...rowOfLine]).toEqual(lines.map((_, i) => i));
   });
 
   it('folds unchanged lines beyond 3 lines of context', () => {
-    const rows = buildVisibleRows(lines, true);
-    expect(rows.map((r) => (r.kind === 'gap' ? `gap${r.count}` : 'line'))).toEqual([
-      'gap7', // lines 1–7
+    const { rows, rowOfLine } = buildSplitRows(lines, true);
+    expect(describeRows(rows)).toEqual([
+      'fold7', // lines 1–7
       ...Array(7).fill('line'),
-      'gap6', // lines 15–20
+      'fold6', // lines 15–20
     ]);
+    expect(rowOfLine[0]).toBe(-1);
+    expect(rowOfLine[10]).toBe(4);
+  });
+
+  it('gives a modified line two rows in the unified view', () => {
+    const { rows, rowOfLine } = buildUnifiedRows(lines, true);
+    expect(describeRows(rows)).toEqual(['fold7', ...Array(8).fill('line'), 'fold6']);
+    const r = rowOfLine[10]!;
+    expect([unifiedLine(rows[r]!), unifiedPart(rows[r]!)]).toEqual([10, 0]);
+    expect([unifiedLine(rows[r + 1]!), unifiedPart(rows[r + 1]!)]).toEqual([10, 1]);
   });
 });
 

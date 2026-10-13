@@ -2,33 +2,36 @@ import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { toast } from 'sonner';
 import { ArrowRight, CircleCheck } from 'lucide-react';
 import { useDiffWorker } from '@/lib/useDiffWorker';
-import { splitLines, type DiffLine, type DiffOptions, type Hunk } from '@/lib/diffProcessor';
-import { buildVisibleRows } from '@/lib/rows';
+import type { DiffLine, DiffOptions, Hunk } from '@/lib/diffProcessor';
+import { buildSplitRows, buildUnifiedRows } from '@/lib/rows';
 import { buildLineMarks } from '@/lib/marks';
 import { generatePatch } from '@/lib/patch';
 import { applyMerge } from '@/lib/merge';
 import { decodeHash, encodeHash } from '@/lib/share';
 import { useTheme } from '@/lib/theme';
 import { SAMPLE_CHANGED, SAMPLE_ORIGINAL } from '@/lib/sample';
-import { detectLang, tokenizeLines } from '@/lib/syntax';
+import { detectLang } from '@/lib/syntax';
 import { summarizeDiff } from '@/lib/summary';
 import { Button } from '@/components/ui/button';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import SiteHeader from '@/components/SiteHeader';
-import EditorPanel, { MAX_HIGHLIGHT_LINES, type EditorPaneHandle } from '@/components/EditorPanel';
+import EditorPanel, { type EditorPaneHandle } from '@/components/EditorPanel';
 import Toolbar, { type HighlightPlacement, type ToolbarOptions, type ViewMode } from '@/components/Toolbar';
-import SideBySideView from '@/components/SideBySideView';
-import UnifiedView from '@/components/UnifiedView';
+import DiffViewport, { type DiffViewportHandle } from '@/components/DiffViewport';
+import { FullSplitTable, type RowContext } from '@/components/DiffRows';
+import FindBar from '@/components/FindBar';
 import SummaryPanel from '@/components/SummaryPanel';
 import { Features, Footer, Hero, Paywall, Privacy } from '@/components/Landing';
 import { LogoMark } from '@/components/Icons';
-import { maxColumns } from '@/lib/textWidth';
 
 interface Snapshot {
   original: string;
   changed: string;
 }
+
+/** Above this many rows (after folding unchanged lines), printing is refused. */
+const MAX_PRINT_ROWS = 20_000;
 
 function isTypingTarget(el: EventTarget | null): boolean {
   return el instanceof HTMLElement && (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT' || el.isContentEditable);
@@ -87,7 +90,10 @@ const App: React.FC = () => {
   const [printing, setPrinting] = useState(false);
   const [currentHunk, setCurrentHunk] = useState(0);
   const [undoStack, setUndoStack] = useState<Snapshot[]>([]);
-  const diffScrollRef = useRef<HTMLDivElement>(null);
+  const [findQuery, setFindQuery] = useState('');
+  const [findIndex, setFindIndex] = useState(0);
+  const viewportRef = useRef<DiffViewportHandle>(null);
+  const findInputRef = useRef<HTMLInputElement>(null);
   const leftEditorRef = useRef<EditorPaneHandle>(null);
   const rightEditorRef = useRef<EditorPaneHandle>(null);
 
@@ -104,45 +110,71 @@ const App: React.FC = () => {
   // Syntax languages (detected from the file name, or the start of the text)
   const leftLang = useMemo(() => detectLang(originalText, originalName), [originalText, originalName]);
   const rightLang = useMemo(() => detectLang(changedText, changedName), [changedText, changedName]);
+  const syntaxLeft = options.syntax ? leftLang : null;
+  const syntaxRight = options.syntax ? rightLang : null;
 
   const { result, input, error, pending } = useDiffWorker(
     originalText,
     changedText,
     diffOptions,
-    options.syntax ? leftLang : null,
-    options.syntax ? rightLang : null,
+    syntaxLeft,
+    syntaxRight,
   );
   const isEmpty = !originalText && !changedText;
   const lines = useMemo(() => (isEmpty ? [] : result?.lines ?? []), [isEmpty, result]);
   const hunks = useMemo(() => (isEmpty ? [] : result?.hunks ?? []), [isEmpty, result]);
   const stats = isEmpty ? null : result?.stats ?? null;
 
-  const widest = useMemo(() => maxColumns(lines), [lines]);
-
-  const rows = useMemo(
-    () => buildVisibleRows(lines, options.collapseUnchanged),
-    [lines, options.collapseUnchanged],
+  const inEditor = placement === 'editor';
+  const rowModel = useMemo(
+    () => (viewMode === 'split' ? buildSplitRows : buildUnifiedRows)(lines, options.collapseUnchanged),
+    [lines, viewMode, options.collapseUnchanged],
   );
 
-  // Syntax colors: tokens for the texts the current diff was computed from
-  const leftTokens = useMemo(
-    () => (options.syntax && input ? tokenizeLines(splitLines(input.originalText), leftLang) : null),
-    [options.syntax, input, leftLang],
+  // Summary only when it's open (it walks the whole diff)
+  const summary = useMemo(
+    () => (summaryOpen && result && !isEmpty ? summarizeDiff(result) : null),
+    [summaryOpen, result, isEmpty],
   );
-  const rightTokens = useMemo(
-    () => (options.syntax && input ? tokenizeLines(splitLines(input.changedText), rightLang) : null),
-    [options.syntax, input, rightLang],
-  );
-
-  const summary = useMemo(() => (result && !isEmpty ? summarizeDiff(result) : null), [result, isEmpty]);
 
   // In-editor highlights; only word-level when the diff matches what's in the boxes right now
-  const inEditor = placement === 'editor';
   const marks = useMemo(() => (inEditor ? buildLineMarks(lines) : null), [inEditor, lines]);
   const marksFresh = input?.originalText === originalText && input?.changedText === changedText;
-  const tooLongToHighlight =
-    inEditor &&
-    Math.max(originalText.split('\n').length, changedText.split('\n').length) > MAX_HIGHLIGHT_LINES;
+
+  // ── Find in diff (the table only renders visible rows, so the browser's own find can't see them) ──
+
+  const find = findQuery.trim().toLowerCase();
+  const matches = useMemo(() => {
+    if (!find || inEditor) return [];
+    const out: number[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (rowModel.rowOfLine[i]! < 0) continue; // folded away
+      const l = lines[i]!;
+      if (l.leftContent?.toLowerCase().includes(find) || l.rightContent?.toLowerCase().includes(find)) out.push(i);
+    }
+    return out;
+  }, [find, inEditor, lines, rowModel]);
+
+  useEffect(() => {
+    setFindIndex(0);
+  }, [find]);
+
+  const currentMatch = matches.length ? matches[Math.min(findIndex, matches.length - 1)]! : -1;
+
+  const goToMatch = useCallback(
+    (delta: number) => {
+      if (!matches.length) return;
+      const next = (findIndex + delta + matches.length) % matches.length;
+      setFindIndex(next);
+      viewportRef.current?.scrollToLine(matches[next]!);
+    },
+    [matches, findIndex],
+  );
+
+  // Jump to the first match as you type
+  useEffect(() => {
+    if (matches.length) viewportRef.current?.scrollToLine(matches[0]!);
+  }, [matches]);
 
   // Keep the hunk cursor valid as the diff changes
   useEffect(() => {
@@ -189,18 +221,7 @@ const App: React.FC = () => {
         rightEditorRef.current?.scrollToLine(hunkLine(lines, hunk, 'rightNum'));
         return;
       }
-
-      const container = diffScrollRef.current;
-      const row = container?.querySelector<HTMLElement>(`[data-diff-line="${hunk.startIndex}"]`);
-      if (container && row) {
-        const offset = row.getBoundingClientRect().top - container.getBoundingClientRect().top;
-        const top = container.scrollTop + offset - container.clientHeight / 3;
-        container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
-        container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        row.classList.remove('is-focused');
-        void row.offsetWidth; // restart the highlight animation
-        row.classList.add('is-focused');
-      }
+      viewportRef.current?.scrollToLine(hunk.startIndex);
     },
     [hunks, lines, inEditor],
   );
@@ -208,7 +229,7 @@ const App: React.FC = () => {
   const handlePrevHunk = useCallback(() => scrollToHunk(currentHunk - 1), [currentHunk, scrollToHunk]);
   const handleNextHunk = useCallback(() => scrollToHunk(currentHunk + 1), [currentHunk, scrollToHunk]);
 
-  // Keyboard shortcuts: Alt+↑/↓ navigate changes, ⌘/Ctrl+Z undoes a merge outside text fields
+  // Keyboard: Alt+↑/↓ changes, ⌘/Ctrl+Z undoes a merge, ⌘/Ctrl+F finds in the diff
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.altKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
@@ -218,15 +239,25 @@ const App: React.FC = () => {
         else handlePrevHunk();
         return;
       }
-      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && !e.shiftKey && e.key.toLowerCase() === 'z') {
         if (undoStack.length === 0 || isTypingTarget(e.target)) return;
         e.preventDefault();
         handleUndo();
+        return;
+      }
+      // Only while the diff panel is on screen and focus isn't in an editor (they have their own search)
+      if (mod && e.key.toLowerCase() === 'f' && !inEditor && result && !isTypingTarget(e.target)) {
+        const panel = document.querySelector('.diff-scroll')?.getBoundingClientRect();
+        if (!panel || panel.bottom < 0 || panel.top > window.innerHeight) return;
+        e.preventDefault();
+        findInputRef.current?.focus();
+        findInputRef.current?.select();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [hunks.length, undoStack.length, handleNextHunk, handlePrevHunk, handleUndo]);
+  }, [hunks.length, undoStack.length, handleNextHunk, handlePrevHunk, handleUndo, inEditor, result]);
 
   // ── Merge ──
 
@@ -314,13 +345,24 @@ const App: React.FC = () => {
     toast.success('Patch downloaded');
   }, [patch, changedName]);
 
+  // The printout shows changes with 3 lines of context (like a patch), not whole files
+  const printModel = useMemo(() => (printing ? buildSplitRows(lines, true) : null), [printing, lines]);
+
   const handlePrint = useCallback(() => {
     if (isEmpty || !result) {
       notify('Nothing to export yet');
       return;
     }
+    if (hunks.length === 0) {
+      notify('No differences to print');
+      return;
+    }
+    if (buildSplitRows(lines, true).rows.length > MAX_PRINT_ROWS) {
+      toast.error('Too many changes to print', { description: 'Download the .patch instead.' });
+      return;
+    }
     setPrinting(true);
-  }, [isEmpty, result]);
+  }, [isEmpty, result, hunks.length, lines]);
 
   // Print only the diff (see .print-only in index.css); the browser offers "Save as PDF"
   useEffect(() => {
@@ -340,45 +382,69 @@ const App: React.FC = () => {
     setOptions((o) => ({ ...o, [key]: value }));
   }, []);
 
+  const rowCtx: RowContext = useMemo(
+    () => ({
+      lines,
+      lineWrap: options.lineWrap,
+      syntax: {
+        left: syntaxLeft,
+        right: syntaxRight,
+        leftStates: result?.leftStates ?? null,
+        rightStates: result?.rightStates ?? null,
+      },
+      find,
+      currentMatch,
+      onMergeLeftToRight: handleMergeLeftToRight,
+      onMergeRightToLeft: handleMergeRightToLeft,
+    }),
+    [lines, options.lineWrap, syntaxLeft, syntaxRight, result, find, currentMatch, handleMergeLeftToRight, handleMergeRightToLeft],
+  );
+
   // ── Diff body (separate panel) ──
 
   let body: React.ReactNode;
   if (isEmpty) {
     body = (
-      <div className="flex min-h-52 flex-col items-center justify-center gap-3 px-4 py-8 text-center text-sm text-muted-foreground">
-        <p>Paste or drop something into a and b, and the differences show up here.</p>
-        <Button variant="outline" size="sm" onClick={handleExample}>
-          Load an example <ArrowRight />
-        </Button>
+      <div className="diff-scroll">
+        <div className="flex min-h-52 flex-col items-center justify-center gap-3 px-4 py-8 text-center text-sm text-muted-foreground">
+          <p>Paste or drop something into a and b, and the differences show up here.</p>
+          <Button variant="outline" size="sm" onClick={handleExample}>
+            Load an example <ArrowRight />
+          </Button>
+        </div>
       </div>
     );
   } else if (error) {
     body = (
-      <div className="flex min-h-52 flex-col items-center justify-center gap-1 px-4 text-center text-sm text-muted-foreground">
-        <p className="font-medium text-foreground">Couldn't compute the diff</p>
-        <p>{error}</p>
+      <div className="diff-scroll">
+        <div className="flex min-h-52 flex-col items-center justify-center gap-1 px-4 text-center text-sm text-muted-foreground">
+          <p className="font-medium text-foreground">Couldn't compute the diff</p>
+          <p>{error}</p>
+        </div>
       </div>
     );
   } else if (!result) {
     body = (
-      <div className="grid min-h-52 place-items-center">
-        <span className="size-4 animate-spin rounded-full border-[1.5px] border-input border-t-foreground" aria-label="Computing diff" />
+      <div className="diff-scroll">
+        <div className="grid min-h-52 place-items-center">
+          <span
+            className="size-4 animate-spin rounded-full border-[1.5px] border-input border-t-foreground"
+            aria-label="Computing diff"
+          />
+        </div>
       </div>
     );
-  } else if (viewMode === 'split') {
+  } else {
     body = (
-      <SideBySideView
-        rows={rows}
-        lineWrap={options.lineWrap}
-        leftTokens={leftTokens}
-        rightTokens={rightTokens}
-        maxColumns={widest}
-        onMergeLeftToRight={handleMergeLeftToRight}
-        onMergeRightToLeft={handleMergeRightToLeft}
+      <DiffViewport
+        ref={viewportRef}
+        mode={viewMode}
+        model={rowModel}
+        ctx={rowCtx}
+        maxColumns={result.maxColumns}
+        pending={pending}
       />
     );
-  } else {
-    body = <UnifiedView rows={rows} lineWrap={options.lineWrap} leftTokens={leftTokens} rightTokens={rightTokens} />;
   }
 
   const identical = !isEmpty && result != null && !error && hunks.length === 0;
@@ -434,8 +500,8 @@ const App: React.FC = () => {
                 leftMarks={marks?.left ?? null}
                 rightMarks={marks?.right ?? null}
                 marksFresh={marksFresh}
-                leftSyntax={options.syntax ? leftLang : null}
-                rightSyntax={options.syntax ? rightLang : null}
+                leftSyntax={syntaxLeft}
+                rightSyntax={syntaxRight}
                 tall={inEditor}
                 leftRef={leftEditorRef}
                 rightRef={rightEditorRef}
@@ -444,27 +510,27 @@ const App: React.FC = () => {
                 onError={(m) => toast.error(m)}
               />
 
-              {(identical || tooLongToHighlight) && (
+              {identical && (
                 <div className="flex items-center gap-2 border-t px-4 py-2 font-mono text-[12.5px] text-add">
-                  {identical ? (
-                    <>
-                      <CircleCheck className="size-3.5" /> a and b are identical
-                      {(options.ignoreCase || options.ignoreWhitespace) && ' (with the current ignore options)'}
-                    </>
-                  ) : (
-                    <span className="text-muted-foreground">
-                      Over {MAX_HIGHLIGHT_LINES.toLocaleString()} lines: in-editor highlighting is paused. Switch to
-                      Separate to see the diff.
-                    </span>
-                  )}
+                  <CircleCheck className="size-3.5" /> a and b are identical
+                  {(options.ignoreCase || options.ignoreWhitespace || ignorePatterns.length > 0) &&
+                    ' (with the current ignore options)'}
                 </div>
               )}
 
-              {!inEditor && (
-                <div ref={diffScrollRef} className={`diff-scroll${pending && result ? ' is-pending' : ''}`}>
-                  {body}
-                </div>
+              {!inEditor && result && !isEmpty && !error && (
+                <FindBar
+                  inputRef={findInputRef}
+                  query={findQuery}
+                  onQueryChange={setFindQuery}
+                  count={matches.length}
+                  index={matches.length ? Math.min(findIndex, matches.length - 1) : -1}
+                  onPrev={() => goToMatch(-1)}
+                  onNext={() => goToMatch(1)}
+                />
               )}
+
+              {!inEditor && body}
             </div>
           </div>
         </section>
@@ -475,14 +541,12 @@ const App: React.FC = () => {
       </main>
       <Footer />
 
-      {printing && result && (
+      {printing && result && printModel && (
         <div className="print-only">
-          <SideBySideView
-            rows={rows}
-            lineWrap
-            leftTokens={leftTokens}
-            rightTokens={rightTokens}
-            printHeader={
+          <FullSplitTable
+            rows={printModel.rows}
+            ctx={{ ...rowCtx, lineWrap: true, find: '', currentMatch: -1, onMergeLeftToRight: undefined, onMergeRightToLeft: undefined }}
+            header={
               <div className="print-brand">
                 <span className="print-brand-name">
                   <LogoMark size={20} /> diffdrop

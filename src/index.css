@@ -345,112 +345,86 @@
     color: var(--text-faint);
   }
 
+  /* CodeMirror fills this box; drag the corner to resize */
   .editor-body {
-    --editor-lh: 21px;
     position: relative;
-    display: flex;
     height: 420px;
     min-height: 160px;
     overflow: hidden;
     resize: vertical;
-    font-family: var(--font-mono);
-    font-size: 13px;
-    line-height: var(--editor-lh);
-    tab-size: 4;
   }
 
   .editor-body.is-tall {
     height: min(74vh, 820px);
   }
 
-  .editor-gutter {
-    flex: none;
-    width: 46px;
-    overflow: hidden;
-    border-right: 1px solid var(--border);
-    background: var(--bg);
-    color: var(--text-faint);
-    font-size: 11.5px;
-    text-align: right;
-    user-select: none;
-    font-variant-numeric: tabular-nums;
+  .editor-body .cm-editor {
+    height: 100%;
   }
 
-  .editor-gutter > div,
-  .editor-backdrop > div {
-    padding: 10px 0;
-    will-change: transform;
+  .cm-diff-add {
+    background: var(--add-bg);
   }
 
-  .editor-gutter span {
-    display: block;
-    height: var(--editor-lh);
-    padding-right: 9px;
+  .cm-diff-del {
+    background: var(--del-bg);
   }
 
-  .editor-gutter .is-add {
+  .cm-gutterElement.cm-gutter-add {
     background: var(--add-num);
     color: var(--add-fg);
   }
 
-  .editor-gutter .is-del {
+  .cm-gutterElement.cm-gutter-del {
     background: var(--del-num);
     color: var(--del-fg);
   }
 
-  .editor-field {
-    position: relative;
-    flex: 1;
-    min-width: 0;
+  /* CodeMirror's search panel (Ctrl/⌘+F inside an editor) */
+  .cm-panels {
+    background: var(--bg-elev) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
   }
 
-  .editor-backdrop {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-    pointer-events: none;
-    color: transparent;
+  .cm-search {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px !important;
+    font-family: var(--font-sans);
+    font-size: 12.5px;
   }
 
-  .editor-backdrop > div {
-    width: max-content;
-    min-width: 100%;
-  }
-
-  .editor-backdrop .bd-line {
-    height: var(--editor-lh);
-    padding: 0 14px;
-    white-space: pre;
-  }
-
-  .editor-backdrop .is-add {
-    background: var(--add-bg);
-  }
-
-  .editor-backdrop .is-del {
-    background: var(--del-bg);
-  }
-
-  .editor-textarea {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    padding: 10px 14px;
-    border: 0;
-    outline: none;
-    resize: none;
-    background: transparent;
+  .cm-search input,
+  .cm-search button {
+    height: 26px;
+    border: 1px solid var(--input);
+    border-radius: 6px;
+    background: var(--bg);
     color: var(--text);
     font: inherit;
-    line-height: inherit;
-    white-space: pre;
-    overflow: auto;
-    overflow-wrap: normal;
+    padding: 0 8px;
   }
 
-  .editor-textarea::placeholder {
-    color: var(--text-faint);
+  .cm-search button:hover {
+    background: var(--bg-hover);
+  }
+
+  .cm-search label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-muted);
+  }
+
+  .cm-searchMatch {
+    background: rgba(250, 204, 21, 0.4);
+  }
+
+  .cm-searchMatch-selected {
+    background: rgba(250, 204, 21, 0.75);
   }
 
   .editor-pane.is-dragging .editor-body {
@@ -486,13 +460,25 @@
     opacity: 0.6;
   }
 
+  /* Every row is exactly 21px tall unless lines wrap (DiffRows.ROW_HEIGHT) */
   .diff-table {
     width: 100%;
     border-collapse: collapse;
     table-layout: fixed;
     font-family: var(--font-mono);
     font-size: 12.5px;
-    line-height: 1.7;
+    line-height: 21px;
+  }
+
+  .diff-table:not(.is-wrapped) td {
+    height: 21px;
+  }
+
+  .diff-table .spacer-row td {
+    height: auto;
+    padding: 0 !important;
+    border: 0 !important;
+    background: none !important;
   }
 
   .diff-table.unified:not(.is-wrapped) {
@@ -560,14 +546,6 @@
     user-select: none;
   }
 
-  .diff-table tr:first-child td {
-    padding-top: 6px;
-  }
-
-  .diff-table tr:last-child td {
-    padding-bottom: 6px;
-  }
-
   .diff-table .is-add {
     background: var(--add-bg);
   }
@@ -611,6 +589,16 @@
 
   .inline-removed {
     background: var(--del-strong);
+  }
+
+  .find-hit {
+    border-radius: 2px;
+    background: rgba(250, 204, 21, 0.45);
+    box-shadow: 0 0 0 1px rgba(202, 138, 4, 0.5);
+  }
+
+  .diff-table tr.is-current-match td.code {
+    box-shadow: inset 2px 0 0 #ca8a04;
   }
 
   .diff-table tr.is-focused td {
@@ -660,7 +648,7 @@
   }
 
   .fold-row td {
-    padding: 3px 0 !important;
+    padding: 0 !important;
     border-top: 1px dashed var(--input);
     border-bottom: 1px dashed var(--input);
     background: var(--bg-subtle);
@@ -715,20 +703,6 @@
 
   .tok-tag {
     color: var(--tok-tag);
-  }
-
-  /* With syntax colors on, the layer behind the textarea draws the text */
-  .editor-backdrop.is-colored {
-    color: var(--text);
-  }
-
-  .editor-textarea.is-colored {
-    color: transparent;
-    caret-color: var(--text);
-  }
-
-  .editor-textarea.is-colored::selection {
-    background: var(--brand-soft);
   }
 
   /* Emphasis inside prose: plain text weight plus a green underline ("safe") */

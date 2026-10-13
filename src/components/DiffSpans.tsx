@@ -8,18 +8,31 @@ interface LineContentProps {
   spans?: InlineSpan[] | null;
   /** Syntax tokens as [start, end) offsets into `text`. */
   tokens?: Token[] | null;
+  /** Lower-cased search text whose occurrences are marked. */
+  find?: string;
+}
+
+/** [start, end) ranges of case-insensitive occurrences of `find` in `text`. */
+function findRanges(text: string, find: string): number[] {
+  const out: number[] = [];
+  if (!find) return out;
+  const hay = text.toLowerCase();
+  for (let at = hay.indexOf(find); at !== -1; at = hay.indexOf(find, at + find.length)) out.push(at, at + find.length);
+  return out;
 }
 
 /**
  * Renders one line, layering syntax colors and diff highlights. The text is cut
  * at every boundary of either layer, so each piece has at most one of each.
  */
-export const LineContent: React.FC<LineContentProps> = ({ text, spans, tokens }) => {
+export const LineContent: React.FC<LineContentProps> = ({ text, spans, tokens, find }) => {
   const hasSpans = spans != null && spans.length > 0;
   const hasTokens = tokens != null && tokens.length > 0;
-  if (!hasSpans && !hasTokens) return <>{text}</>;
+  const hits = find ? findRanges(text, find) : [];
+  if (!hasSpans && !hasTokens && hits.length === 0) return <>{text}</>;
 
   const cuts = new Set<number>([0, text.length]);
+  for (const h of hits) cuts.add(h);
   const diffRanges: { start: number; end: number; type: InlineSpan['type'] }[] = [];
   if (hasSpans) {
     let pos = 0;
@@ -41,6 +54,7 @@ export const LineContent: React.FC<LineContentProps> = ({ text, spans, tokens })
   const pieces: React.ReactNode[] = [];
   let di = 0;
   let ti = 0;
+  let hi = 0;
   for (let k = 0; k + 1 < points.length; k++) {
     const a = points[k]!;
     const b = points[k + 1]!;
@@ -49,10 +63,13 @@ export const LineContent: React.FC<LineContentProps> = ({ text, spans, tokens })
     while (hasTokens && ti < tokens!.length && tokens![ti]!.end <= a) ti++;
     const diff = diffRanges[di] && diffRanges[di]!.start <= a ? diffRanges[di]!.type : 'equal';
     const tok = hasTokens && tokens![ti] && tokens![ti]!.start <= a ? tokens![ti]!.kind : null;
+    while (hi < hits.length && hits[hi + 1]! <= a) hi += 2;
+    const hit = hi < hits.length && hits[hi]! <= a;
 
     const cls = [
       tok ? `tok-${tok}` : '',
       diff === 'added' ? 'inline-added' : diff === 'removed' ? 'inline-removed' : '',
+      hit ? 'find-hit' : '',
     ]
       .filter(Boolean)
       .join(' ');
