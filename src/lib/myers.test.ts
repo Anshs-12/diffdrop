@@ -54,6 +54,24 @@ describe('myersDiff', () => {
     });
   }
 
+  it('never loses lines on large inputs (unique-line anchors and the cost cap)', () => {
+    const rand = rng(99);
+    // Few distinct lines: few anchors, so big gaps where the cost cap applies
+    for (let round = 0; round < 3; round++) {
+      const a = randomTokens(rand, 9000, ['{', '}', 'return;', '', 'x++;', `u${round}`]);
+      const b = randomTokens(rand, 9000, ['{', '}', 'return;', '', 'x++;', `v${round}`]);
+      const moves = myersDiff(a, b);
+      expect(oldSide(moves)).toEqual(a);
+      expect(newSide(moves)).toEqual(b);
+    }
+    // Mostly unique lines with random edits: anchored path
+    const a = Array.from({ length: 12_000 }, (_, i) => `line ${i}`);
+    const b = a.flatMap((l, i) => (rand() < 0.02 ? [] : rand() < 0.02 ? [l, `new ${i}`] : rand() < 0.02 ? [`edit ${i}`] : [l]));
+    const moves = myersDiff(a, b);
+    expect(oldSide(moves)).toEqual(a);
+    expect(newSide(moves)).toEqual(b);
+  });
+
   it('falls back to delete-all/add-all when the edit distance is enormous', () => {
     // 6k vs 6k completely different lines needs ~36M snapshot cells (> the cap)
     const a = Array.from({ length: 6000 }, (_, i) => `a${i}`);
