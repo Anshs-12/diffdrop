@@ -30,3 +30,27 @@ npm run dev      # dev server
 npm run build    # type-check and build to dist/
 npm run preview  # serve the production build
 ```
+
+## Testing
+
+```sh
+npm test           # unit and randomized property tests (Vitest)
+npm run test:e2e   # browser tests against the production build (Playwright)
+npm run test:perf  # rendering time budgets in the browser
+npm run test:all   # everything
+```
+
+- **Engine**: Myers is checked against a reference LCS on 20,000 random inputs
+  (every result must rebuild both sides and be minimal); generated patches are
+  applied with the real `git apply`; merges must converge.
+- **Browser**: diffing, split/unified, merge and undo, ignore rules, in-editor
+  highlights, `.patch` download, share links, theme, and privacy checks (the
+  CSP is present, no requests are made while diffing, outgoing `fetch` is
+  blocked).
+- **Performance**: time budgets for the engine (20k and 100k lines) and for
+  rendering in the browser.
+
+Browser tests use your installed Google Chrome. To use Playwright's bundled
+Chromium instead (e.g. in CI): `npx playwright install chromium` and run with
+`PW_CHANNEL=`.
+
