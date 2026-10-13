@@ -1,6 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { DiffOptions, DiffResult } from './diffProcessor';
 import type { WorkerRequest, WorkerResponse } from './diff.worker';
+
+export interface DiffState {
+  result: DiffResult | null;
+  /** The texts `result` was computed from (may lag behind the editors while typing). */
+  input: { originalText: string; changedText: string } | null;
+  error: string | null;
+  pending: boolean;
+}
 
 /**
  * Hook that manages a diff Web Worker and returns the latest DiffResult.
@@ -9,10 +17,11 @@ export function useDiffWorker(
   originalText: string,
   changedText: string,
   options: DiffOptions,
-): DiffResult | null {
-  const [result, setResult] = useState<DiffResult | null>(null);
+): DiffState {
+  const [state, setState] = useState<DiffState>({ result: null, input: null, error: null, pending: false });
   const workerRef = useRef<Worker | null>(null);
   const idRef = useRef(0);
+  const lastRequestRef = useRef<WorkerRequest | null>(null);
 
   useEffect(() => {
     const worker = new Worker(
@@ -23,33 +32,39 @@ export function useDiffWorker(
 
     worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
       // Only accept the most recent result
-      if (e.data.id === idRef.current) {
-        setResult(e.data.result);
+      const request = lastRequestRef.current;
+      if (e.data.id !== idRef.current || !request) return;
+      const input = { originalText: request.originalText, changedText: request.changedText };
+      if (e.data.error !== undefined) {
+        setState({ result: null, input, error: e.data.error, pending: false });
+      } else {
+        setState({ result: e.data.result, input, error: null, pending: false });
       }
     };
 
     return () => {
       worker.terminate();
+      workerRef.current = null;
     };
   }, []);
 
-  const requestDiff = useCallback(() => {
-    if (!workerRef.current) return;
-    idRef.current += 1;
-    const request: WorkerRequest = {
-      id: idRef.current,
-      originalText,
-      changedText,
-      options,
-    };
-    workerRef.current.postMessage(request);
-  }, [originalText, changedText, options]);
-
   // Debounce diff requests
   useEffect(() => {
-    const timer = setTimeout(requestDiff, 150);
+    setState((s) => (s.pending ? s : { ...s, pending: true }));
+    const timer = setTimeout(() => {
+      if (!workerRef.current) return;
+      idRef.current += 1;
+      const request: WorkerRequest = {
+        id: idRef.current,
+        originalText,
+        changedText,
+        options,
+      };
+      lastRequestRef.current = request;
+      workerRef.current.postMessage(request);
+    }, 120);
     return () => clearTimeout(timer);
-  }, [requestDiff]);
+  }, [originalText, changedText, options]);
 
-  return result;
+  return state;
 }
