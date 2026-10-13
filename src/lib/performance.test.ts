@@ -1,43 +1,60 @@
 import { describe, expect, it } from 'vitest';
-import { computeDiff, type DiffOptions } from './diffProcessor';
+import { computeCompactDiff, type DiffOptions } from './diffProcessor';
 
 /**
- * Budgets for the diff engine alone (rendering is covered by the browser tests).
- * Measured around 15 ms for 20k lines and 220 ms for 100k lines on an M-series
- * laptop; the limits leave plenty of room for slower CI machines while still
- * catching an accidental quadratic slowdown.
+ * Speed and correctness of the diff engine on large inputs (rendering is covered
+ * by the browser tests). Measured on an M-series laptop: ~45 ms for 100k lines,
+ * ~300 ms for 500k lines when run alone. Limits leave room for slower CI machines
+ * and parallel test files, while still catching an accidental quadratic slowdown
+ * (the old engine needed ~5 s for 500k lines and returned the wrong answer).
  */
 const base: DiffOptions = { ignoreWhitespace: false, ignoreCase: false, charLevel: false, ignorePatterns: [] };
 
-function fixture(lines: number, everyNth: number) {
+/** `lines` unique lines; every 40th one gets edited in the second text. */
+function fixture(lines: number) {
   const a = Array.from({ length: lines }, (_, i) => `line ${i} value = ${i * 3};`).join('\n');
   const b = a
     .split('\n')
-    .map((l, i) => (i % everyNth === 0 ? `${l} // edited` : l))
+    .map((l, i) => (i % 40 === 0 ? `${l} // edited` : l))
     .join('\n');
-  return { a, b };
+  return { a, b, edits: Math.ceil(lines / 40) };
 }
 
-function time(fn: () => void): number {
+function time<T>(fn: () => T): { ms: number; value: T } {
   fn(); // warm up the JIT
   const t0 = performance.now();
-  fn();
-  return performance.now() - t0;
+  const value = fn();
+  return { ms: performance.now() - t0, value };
 }
 
-describe('diff engine performance', () => {
-  it('diffs 20,000 lines with 500 edits in under 250 ms', () => {
-    const { a, b } = fixture(20_000, 40);
-    expect(time(() => computeDiff(a, b, base))).toBeLessThan(250);
-  });
+describe('diff engine at scale', () => {
+  for (const [lines, budgetMs] of [
+    // Generous: other test files run in parallel and compete for the CPU
+    [20_000, 500],
+    [100_000, 1500],
+    [500_000, 6000],
+  ] as const) {
+    it(`diffs ${lines.toLocaleString()} lines exactly, within ${budgetMs} ms`, () => {
+      const { a, b, edits } = fixture(lines);
+      const { ms, value } = time(() => computeCompactDiff(a, b, base));
+      // The real minimal answer, not a "replace everything" fallback
+      expect(value.stats).toEqual({ added: edits, removed: edits });
+      expect(value.hunks).toHaveLength(edits);
+      expect(ms).toBeLessThan(budgetMs);
+    });
+  }
 
-  it('diffs 100,000 lines with 2,500 edits in under 3 s', () => {
-    const { a, b } = fixture(100_000, 40);
-    expect(time(() => computeDiff(a, b, base))).toBeLessThan(3000);
+  it('answers instantly when two big files share nothing', () => {
+    const a = Array.from({ length: 200_000 }, (_, i) => `a${i}`).join('\n');
+    const b = Array.from({ length: 200_000 }, (_, i) => `b${i}`).join('\n');
+    const { ms, value } = time(() => computeCompactDiff(a, b, base));
+    expect(value.stats).toEqual({ added: 200_000, removed: 200_000 });
+    expect(ms).toBeLessThan(1500);
   });
 
   it('stays fast for character-level diffs of long lines', () => {
     const line = 'x'.repeat(5000);
-    expect(time(() => computeDiff(`${line}a\n`, `${line}b\n`, { ...base, charLevel: true }))).toBeLessThan(250);
+    const { ms } = time(() => computeCompactDiff(`${line}a\n`, `${line}b\n`, { ...base, charLevel: true }));
+    expect(ms).toBeLessThan(250);
   });
 });

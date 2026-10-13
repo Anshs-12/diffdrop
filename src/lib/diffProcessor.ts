@@ -1,4 +1,6 @@
-import { myersDiff } from './myers';
+import { diffIds, intern, myersDiff, OP_DELETE, OP_EQUAL } from './myers';
+import { columns } from './textWidth';
+import { lineStartStates, type Lang } from './syntax';
 
 /**
  * Types for the structured diff output used by the UI.
@@ -45,13 +47,6 @@ export interface DiffStats {
 export interface EofInfo {
   oldMissing: boolean;
   newMissing: boolean;
-}
-
-export interface DiffResult {
-  lines: DiffLine[];
-  hunks: Hunk[];
-  stats: DiffStats;
-  eof: EofInfo;
 }
 
 /** Lines longer than this are highlighted as a whole instead of word-by-word. */
@@ -165,14 +160,67 @@ function computeInlineSpans(
   return { leftSpans, rightSpans };
 }
 
+/** Row kinds in a compact diff. */
+export const ROW_UNCHANGED = 0;
+export const ROW_REMOVED = 1;
+export const ROW_ADDED = 2;
+export const ROW_MODIFIED = 3;
+
+const KIND_NAMES: DiffLine['type'][] = ['unchanged', 'removed', 'added', 'modified'];
+
 /**
- * Main function: compute a structured diff from two text inputs.
+ * A diff as flat typed arrays, cheap to build and to transfer from the worker
+ * (the buffers are handed over, not copied). Line text is not included: the
+ * receiver already has both texts and looks lines up by number.
  */
-export function computeDiff(
+export interface CompactDiff {
+  /** Per row: ROW_UNCHANGED / ROW_REMOVED / ROW_ADDED / ROW_MODIFIED. */
+  kinds: Uint8Array;
+  /** Per row: 1-based line number on each side, 0 when the row has no line there. */
+  leftNums: Int32Array;
+  rightNums: Int32Array;
+  /** Word/character highlights, only for modified rows that have them. */
+  spans: { row: number; left: InlineSpan[] | null; right: InlineSpan[] | null }[];
+  hunks: Hunk[];
+  stats: DiffStats;
+  eof: EofInfo;
+  /** Widest line on either side, in monospace columns. */
+  maxColumns: number;
+  /** Per line, whether it starts inside a block comment (null = never). */
+  leftStates: Uint8Array | null;
+  rightStates: Uint8Array | null;
+}
+
+export interface DiffResult {
+  lines: DiffLine[];
+  hunks: Hunk[];
+  stats: DiffStats;
+  eof: EofInfo;
+  maxColumns: number;
+  leftStates: Uint8Array | null;
+  rightStates: Uint8Array | null;
+}
+
+/**
+ * Block-comment state at the start of each line, for syntax-coloring any line on
+ * its own. Null when the language has no block comments or the text has none.
+ */
+export function blockCommentStates(text: string, lines: string[], lang: Lang | null): Uint8Array | null {
+  if (lang !== 'c' && lang !== 'markup') return null;
+  if (!text.includes(lang === 'c' ? '/*' : '<!--')) return null;
+  return Uint8Array.from(lineStartStates(lines, lang));
+}
+
+/**
+ * Compute a diff of two texts as a CompactDiff. `langs` (optional) adds the
+ * block-comment states the views need for syntax colors.
+ */
+export function computeCompactDiff(
   originalText: string,
   changedText: string,
   options: DiffOptions,
-): DiffResult {
+  langs: { left: Lang | null; right: Lang | null } = { left: null, right: null },
+): CompactDiff {
   const originalLines = splitLines(originalText);
   const changedLines = splitLines(changedText);
 
@@ -193,111 +241,141 @@ export function computeDiff(
     if (eof.newMissing) normChanged[normChanged.length - 1] += marker;
   }
 
-  const moves = myersDiff(normOriginal, normChanged);
+  const ids = intern(normOriginal, normChanged);
+  const ops = diffIds(ids.a, ids.b, ids.distinct);
 
-  // Map moves back to original lines with proper line numbers
-  const lines: DiffLine[] = [];
-  let leftIdx = 0;
-  let rightIdx = 0;
+  const kinds = new Uint8Array(ops.length);
+  const leftNums = new Int32Array(ops.length);
+  const rightNums = new Int32Array(ops.length);
+  const spans: CompactDiff['spans'] = [];
+  const stats: DiffStats = { added: 0, removed: 0 };
+  let rows = 0;
+  let i = 0; // next line on the left (0-based)
+  let j = 0; // next line on the right
+  let p = 0;
 
-  for (const move of moves) {
-    if (move.moveType === 'unchanged') {
-      lines.push({
-        leftNum: leftIdx + 1,
-        rightNum: rightIdx + 1,
-        leftContent: originalLines[leftIdx]!,
-        rightContent: changedLines[rightIdx]!,
-        type: 'unchanged',
-        leftSpans: null,
-        rightSpans: null,
-      });
-      leftIdx++;
-      rightIdx++;
-    } else if (move.moveType === 'delete') {
-      lines.push({
-        leftNum: leftIdx + 1,
-        rightNum: null,
-        leftContent: originalLines[leftIdx]!,
-        rightContent: null,
-        type: 'removed',
-        leftSpans: null,
-        rightSpans: null,
-      });
-      leftIdx++;
-    } else {
-      lines.push({
-        leftNum: null,
-        rightNum: rightIdx + 1,
-        leftContent: null,
-        rightContent: changedLines[rightIdx]!,
-        type: 'added',
-        leftSpans: null,
-        rightSpans: null,
-      });
-      rightIdx++;
-    }
-  }
-
-  // Post-process: within each change block, pair the i-th removed line with the
-  // i-th added line as a "modified" line with inline spans; leftovers stay as-is.
-  const merged: DiffLine[] = [];
-  let i = 0;
-  while (i < lines.length) {
-    if (lines[i]!.type === 'unchanged') {
-      merged.push(lines[i]!);
-      i++;
+  while (p < ops.length) {
+    if (ops[p] === OP_EQUAL) {
+      kinds[rows] = ROW_UNCHANGED;
+      leftNums[rows] = ++i;
+      rightNums[rows] = ++j;
+      rows++;
+      p++;
       continue;
     }
 
-    const removed: DiffLine[] = [];
-    const added: DiffLine[] = [];
-    while (i < lines.length && lines[i]!.type !== 'unchanged') {
-      (lines[i]!.type === 'removed' ? removed : added).push(lines[i]!);
-      i++;
+    // A change block: its deletions and insertions, in order
+    const delStart = i;
+    const insStart = j;
+    while (p < ops.length && ops[p] !== OP_EQUAL) {
+      if (ops[p] === OP_DELETE) i++;
+      else j++;
+      p++;
     }
+    const dels = i - delStart;
+    const ins = j - insStart;
+    stats.removed += dels;
+    stats.added += ins;
 
-    const pairs = Math.min(removed.length, added.length);
-    for (let p = 0; p < pairs; p++) {
-      const left = removed[p]!;
-      const right = added[p]!;
+    // Pair the k-th removed line with the k-th added line as a modified row
+    const pairs = Math.min(dels, ins);
+    for (let k = 0; k < pairs; k++) {
+      kinds[rows] = ROW_MODIFIED;
+      leftNums[rows] = delStart + k + 1;
+      rightNums[rows] = insStart + k + 1;
       const { leftSpans, rightSpans } = computeInlineSpans(
-        left.leftContent!,
-        right.rightContent!,
+        originalLines[delStart + k]!,
+        changedLines[insStart + k]!,
         options.charLevel,
       );
-      merged.push({
-        leftNum: left.leftNum,
-        rightNum: right.rightNum,
-        leftContent: left.leftContent,
-        rightContent: right.rightContent,
-        type: 'modified',
-        leftSpans,
-        rightSpans,
-      });
+      if (leftSpans || rightSpans) spans.push({ row: rows, left: leftSpans, right: rightSpans });
+      rows++;
     }
-    merged.push(...removed.slice(pairs), ...added.slice(pairs));
+    for (let k = pairs; k < dels; k++) {
+      kinds[rows] = ROW_REMOVED;
+      leftNums[rows] = delStart + k + 1;
+      rightNums[rows] = 0;
+      rows++;
+    }
+    for (let k = pairs; k < ins; k++) {
+      kinds[rows] = ROW_ADDED;
+      leftNums[rows] = 0;
+      rightNums[rows] = insStart + k + 1;
+      rows++;
+    }
   }
 
-  // Compute hunks (groups of contiguous changed lines)
+  // Hunks: runs of changed rows
   const hunks: Hunk[] = [];
   let hunkStart = -1;
-  for (let j = 0; j < merged.length; j++) {
-    if (merged[j]!.type !== 'unchanged') {
-      if (hunkStart === -1) hunkStart = j;
+  for (let r = 0; r < rows; r++) {
+    if (kinds[r] !== ROW_UNCHANGED) {
+      if (hunkStart === -1) hunkStart = r;
     } else if (hunkStart !== -1) {
-      hunks.push({ startIndex: hunkStart, endIndex: j });
+      hunks.push({ startIndex: hunkStart, endIndex: r });
       hunkStart = -1;
     }
   }
-  if (hunkStart !== -1) {
-    hunks.push({ startIndex: hunkStart, endIndex: merged.length });
-  }
+  if (hunkStart !== -1) hunks.push({ startIndex: hunkStart, endIndex: rows });
 
-  const stats: DiffStats = { added: 0, removed: 0 };
-  for (const move of moves) {
-    if (move.moveType === 'add') stats.added++;
-    else if (move.moveType === 'delete') stats.removed++;
-  }
+  // A character is at most 4 columns wide (a tab), so shorter lines can be skipped
+  let maxColumns = 0;
+  for (const l of originalLines) if (l.length * 4 > maxColumns) maxColumns = Math.max(maxColumns, columns(l));
+  for (const l of changedLines) if (l.length * 4 > maxColumns) maxColumns = Math.max(maxColumns, columns(l));
 
-  return { lines: merged, hunks, stats, eof };
+  return {
+    kinds: kinds.slice(0, rows),
+    leftNums: leftNums.slice(0, rows),
+    rightNums: rightNums.slice(0, rows),
+    spans,
+    hunks,
+    stats,
+    eof,
+    maxColumns,
+    leftStates: blockCommentStates(originalText, originalLines, langs.left),
+    rightStates: blockCommentStates(changedText, changedLines, langs.right),
+  };
+}
+
+/** Turn a CompactDiff back into rows of text, using the caller's copy of both texts. */
+export function expandDiff(compact: CompactDiff, originalLines: string[], changedLines: string[]): DiffResult {
+  const { kinds, leftNums, rightNums } = compact;
+  const lines: DiffLine[] = new Array(kinds.length);
+  for (let r = 0; r < kinds.length; r++) {
+    const ln = leftNums[r]!;
+    const rn = rightNums[r]!;
+    lines[r] = {
+      leftNum: ln || null,
+      rightNum: rn || null,
+      leftContent: ln ? originalLines[ln - 1]! : null,
+      rightContent: rn ? changedLines[rn - 1]! : null,
+      type: KIND_NAMES[kinds[r]!]!,
+      leftSpans: null,
+      rightSpans: null,
+    };
+  }
+  for (const s of compact.spans) {
+    lines[s.row]!.leftSpans = s.left;
+    lines[s.row]!.rightSpans = s.right;
+  }
+  return {
+    lines,
+    hunks: compact.hunks,
+    stats: compact.stats,
+    eof: compact.eof,
+    maxColumns: compact.maxColumns,
+    leftStates: compact.leftStates,
+    rightStates: compact.rightStates,
+  };
+}
+
+/**
+ * Main function: compute a structured diff from two text inputs.
+ */
+export function computeDiff(originalText: string, changedText: string, options: DiffOptions): DiffResult {
+  return expandDiff(
+    computeCompactDiff(originalText, changedText, options),
+    splitLines(originalText),
+    splitLines(changedText),
+  );
 }

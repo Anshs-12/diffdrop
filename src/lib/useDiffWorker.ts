@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import type { DiffOptions, DiffResult } from './diffProcessor';
+import { expandDiff, splitLines, type DiffOptions, type DiffResult } from './diffProcessor';
 import type { WorkerRequest, WorkerResponse } from './diff.worker';
+import type { Lang } from './syntax';
 
 export interface DiffState {
   result: DiffResult | null;
@@ -17,6 +18,8 @@ export function useDiffWorker(
   originalText: string,
   changedText: string,
   options: DiffOptions,
+  leftLang: Lang | null,
+  rightLang: Lang | null,
 ): DiffState {
   const [state, setState] = useState<DiffState>({ result: null, input: null, error: null, pending: false });
   const workerRef = useRef<Worker | null>(null);
@@ -38,7 +41,11 @@ export function useDiffWorker(
       if (e.data.error !== undefined) {
         setState({ result: null, input, error: e.data.error, pending: false });
       } else {
-        setState({ result: e.data.result, input, error: null, pending: false });
+        // Rows reference this thread's own copy of the lines; no text crossed over
+        performance.mark('diffdrop:result');
+        const result = expandDiff(e.data.result, splitLines(input.originalText), splitLines(input.changedText));
+        performance.mark('diffdrop:expanded');
+        setState({ result, input, error: null, pending: false });
       }
     };
 
@@ -59,12 +66,15 @@ export function useDiffWorker(
         originalText,
         changedText,
         options,
+        langs: { left: leftLang, right: rightLang },
       };
       lastRequestRef.current = request;
+      // Timing marks for performance tests and the browser's performance panel
+      performance.mark('diffdrop:request');
       workerRef.current.postMessage(request);
     }, 120);
     return () => clearTimeout(timer);
-  }, [originalText, changedText, options]);
+  }, [originalText, changedText, options, leftLang, rightLang]);
 
   return state;
 }

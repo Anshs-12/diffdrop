@@ -101,7 +101,17 @@ const App: React.FC = () => {
     [options.ignoreWhitespace, options.ignoreCase, options.charLevel, ignorePatterns],
   );
 
-  const { result, input, error, pending } = useDiffWorker(originalText, changedText, diffOptions);
+  // Syntax languages (detected from the file name, or the start of the text)
+  const leftLang = useMemo(() => detectLang(originalText, originalName), [originalText, originalName]);
+  const rightLang = useMemo(() => detectLang(changedText, changedName), [changedText, changedName]);
+
+  const { result, input, error, pending } = useDiffWorker(
+    originalText,
+    changedText,
+    diffOptions,
+    options.syntax ? leftLang : null,
+    options.syntax ? rightLang : null,
+  );
   const isEmpty = !originalText && !changedText;
   const lines = useMemo(() => (isEmpty ? [] : result?.lines ?? []), [isEmpty, result]);
   const hunks = useMemo(() => (isEmpty ? [] : result?.hunks ?? []), [isEmpty, result]);
@@ -114,9 +124,7 @@ const App: React.FC = () => {
     [lines, options.collapseUnchanged],
   );
 
-  // Syntax colors: language per side, tokens for the texts the current diff was computed from
-  const leftLang = useMemo(() => detectLang(originalText, originalName), [originalText, originalName]);
-  const rightLang = useMemo(() => detectLang(changedText, changedName), [changedText, changedName]);
+  // Syntax colors: tokens for the texts the current diff was computed from
   const leftTokens = useMemo(
     () => (options.syntax && input ? tokenizeLines(splitLines(input.originalText), leftLang) : null),
     [options.syntax, input, leftLang],
