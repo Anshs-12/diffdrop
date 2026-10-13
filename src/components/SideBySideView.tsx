@@ -1,143 +1,132 @@
 import React from 'react';
-import type { DiffLine, InlineSpan } from '../lib/diffProcessor';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+import type { DiffLine } from '@/lib/diffProcessor';
+import type { VisibleRow } from '@/lib/rows';
+import type { Token } from '@/lib/syntax';
+import { GapRow, LineContent } from './DiffSpans';
 
 interface SideBySideViewProps {
-  lines: DiffLine[];
-  hideUnchanged: boolean;
+  rows: VisibleRow[];
   lineWrap: boolean;
-  onMergeLeftToRight: (index: number) => void;
-  onMergeRightToLeft: (index: number) => void;
+  /** Syntax tokens per line (index = line number − 1), or null when off. */
+  leftTokens: Token[][] | null;
+  rightTokens: Token[][] | null;
+  onMergeLeftToRight?: (index: number) => void;
+  onMergeRightToLeft?: (index: number) => void;
+  /** Widest line in monospace columns; keeps both halves equal when lines are long. */
+  maxColumns?: number;
+  /** Rendered as a table header, which browsers repeat on every printed page. */
+  printHeader?: React.ReactNode;
 }
 
-const renderSpans = (spans: InlineSpan[] | null, fallback: string | null) => {
-  if (!spans || spans.length === 0) {
-    return fallback ?? '';
+function sideClasses(line: DiffLine): [string, string] {
+  switch (line.type) {
+    case 'removed':
+      return ['is-del', 'is-empty'];
+    case 'added':
+      return ['is-empty', 'is-add'];
+    case 'modified':
+      return ['is-del', 'is-add'];
+    default:
+      return ['', ''];
   }
-  return spans.map((span, i) => {
-    let cls = '';
-    if (span.type === 'added') cls = 'inline-added';
-    else if (span.type === 'removed') cls = 'inline-removed';
-    return (
-      <span key={i} className={cls}>
-        {span.text}
-      </span>
-    );
-  });
-};
+}
 
 const SideBySideView: React.FC<SideBySideViewProps> = ({
-  lines,
-  hideUnchanged,
+  rows,
   lineWrap,
+  leftTokens,
+  rightTokens,
   onMergeLeftToRight,
   onMergeRightToLeft,
-}) => {
-  // If hiding unchanged, insert separator rows. Track original index for merge/nav.
-  const rows: ({ line: DiffLine; origIdx: number } | 'separator')[] = [];
-  let lastWasHidden = false;
+  maxColumns = 0,
+  printHeader,
+}) => (
+  <table
+    className={`diff-table split${lineWrap ? ' is-wrapped' : ''}`}
+    // Each half: line number (48px) + code padding (26px) + the longest line
+    style={lineWrap ? undefined : ({ '--split-min': `calc(2 * (74px + ${maxColumns}ch) + 44px)` } as React.CSSProperties)}
+  >
+    <colgroup>
+      <col className="col-num" />
+      <col className="col-content" />
+      <col className="col-gutter" />
+      <col className="col-num" />
+      <col className="col-content" />
+    </colgroup>
+    {printHeader && (
+      <thead>
+        <tr>
+          <th colSpan={5} className="print-head">
+            {printHeader}
+          </th>
+        </tr>
+      </thead>
+    )}
+    <tbody>
+      {rows.map((row) => {
+        if (row.kind === 'gap') return <GapRow key={row.key} count={row.count} colSpan={5} />;
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!;
-    if (hideUnchanged && line.type === 'unchanged') {
-      if (!lastWasHidden) {
-        rows.push('separator');
-        lastWasHidden = true;
-      }
-      continue;
-    }
-    lastWasHidden = false;
-    rows.push({ line, origIdx: i });
-  }
+        const { line, index } = row;
+        const [left, right] = sideClasses(line);
+        const changed = line.type !== 'unchanged';
+        const canMerge = changed && onMergeLeftToRight && onMergeRightToLeft;
 
-  const contentClass = `diff-line-content${lineWrap ? ' wrap' : ''}`;
-
-  return (
-    <div className="diff-panel">
-      <table className="diff-table side-by-side">
-        <colgroup>
-          <col className="diff-col-left-num" />
-          <col className="diff-col-left-content" />
-          <col className="diff-col-gutter" />
-          <col className="diff-col-right-num" />
-          <col className="diff-col-right-content" />
-        </colgroup>
-        <tbody>
-          {rows.map((row, idx) => {
-            if (row === 'separator') {
-              return (
-                <tr key={`sep-${idx}`} className="hunk-separator">
-                  <td colSpan={5}>···</td>
-                </tr>
-              );
-            }
-
-            const { line, origIdx } = row;
-            let leftClass = '';
-            let rightClass = '';
-
-            if (line.type === 'removed') {
-              leftClass = 'diff-line-removed';
-            } else if (line.type === 'added') {
-              rightClass = 'diff-line-added';
-            } else if (line.type === 'modified') {
-              leftClass = 'diff-line-modified-left diff-line-removed';
-              rightClass = 'diff-line-modified-right diff-line-added';
-            } else {
-              leftClass = 'diff-line-unchanged';
-              rightClass = 'diff-line-unchanged';
-            }
-
-            const showMerge = line.type !== 'unchanged';
-
-            return (
-              <tr key={idx} data-diff-line={origIdx}>
-                <td className={`diff-line-num ${leftClass}`}>
-                  {line.leftNum ?? ''}
-                </td>
-                <td className={`${contentClass} ${leftClass}`}>
-                  {line.type === 'modified'
-                    ? renderSpans(line.leftSpans, line.leftContent)
-                    : (line.leftContent ?? '')}
-                </td>
-                <td className="diff-gutter">
-                  {showMerge && (
-                    <>
-                      {line.leftContent != null && (
-                        <button
-                          className="merge-btn"
-                          title="Copy to right"
-                          onClick={() => onMergeLeftToRight(origIdx)}
-                        >
-                          →
-                        </button>
-                      )}
-                      {line.rightContent != null && (
-                        <button
-                          className="merge-btn"
-                          title="Copy to left"
-                          onClick={() => onMergeRightToLeft(origIdx)}
-                        >
-                          ←
-                        </button>
-                      )}
-                    </>
+        return (
+          <tr key={index} data-diff-line={index}>
+            <td className={`num ${left}`}>{line.leftNum ?? ''}</td>
+            <td className={`code ${left}`}>
+              {line.leftContent != null && (
+                <LineContent
+                  text={line.leftContent}
+                  spans={line.leftSpans}
+                  tokens={line.leftNum != null ? leftTokens?.[line.leftNum - 1] : null}
+                />
+              )}
+            </td>
+            <td className="merge-gutter">
+              {canMerge && (
+                <div className="merge-actions">
+                  {line.leftContent != null && (
+                    <button
+                      type="button"
+                      className="merge-btn"
+                      title="Copy to b"
+                      aria-label={`Copy line ${line.leftNum} of a to b`}
+                      onClick={() => onMergeLeftToRight(index)}
+                    >
+                      <ArrowRight className="size-3" />
+                    </button>
                   )}
-                </td>
-                <td className={`diff-line-num ${rightClass}`}>
-                  {line.rightNum ?? ''}
-                </td>
-                <td className={`${contentClass} ${rightClass}`}>
-                  {line.type === 'modified'
-                    ? renderSpans(line.rightSpans, line.rightContent)
-                    : (line.rightContent ?? '')}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-};
+                  {line.rightContent != null && (
+                    <button
+                      type="button"
+                      className="merge-btn"
+                      title="Copy to a"
+                      aria-label={`Copy line ${line.rightNum} of b to a`}
+                      onClick={() => onMergeRightToLeft(index)}
+                    >
+                      <ArrowLeft className="size-3" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </td>
+            <td className={`num ${right}`}>{line.rightNum ?? ''}</td>
+            <td className={`code ${right}`}>
+              {line.rightContent != null && (
+                <LineContent
+                  text={line.rightContent}
+                  spans={line.rightSpans}
+                  tokens={line.rightNum != null ? rightTokens?.[line.rightNum - 1] : null}
+                />
+              )}
+            </td>
+          </tr>
+        );
+      })}
+    </tbody>
+  </table>
+);
 
 export default SideBySideView;

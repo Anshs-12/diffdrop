@@ -1,159 +1,97 @@
 import React from 'react';
-import type { DiffLine, InlineSpan } from '../lib/diffProcessor';
+import type { VisibleRow } from '@/lib/rows';
+import type { Token } from '@/lib/syntax';
+import { GapRow, LineContent } from './DiffSpans';
 
 interface UnifiedViewProps {
-  lines: DiffLine[];
-  hideUnchanged: boolean;
+  rows: VisibleRow[];
   lineWrap: boolean;
+  leftTokens: Token[][] | null;
+  rightTokens: Token[][] | null;
 }
 
-const renderSpans = (spans: InlineSpan[] | null, fallback: string | null) => {
-  if (!spans || spans.length === 0) {
-    return fallback ?? '';
-  }
-  return spans.map((span, i) => {
-    let cls = '';
-    if (span.type === 'added') cls = 'inline-added';
-    else if (span.type === 'removed') cls = 'inline-removed';
-    return (
-      <span key={i} className={cls}>
-        {span.text}
-      </span>
-    );
-  });
-};
+interface UnifiedRow {
+  key: string;
+  index: number;
+  oldNum: number | null;
+  newNum: number | null;
+  prefix: string;
+  cls: string;
+  content: React.ReactNode;
+}
 
-const UnifiedView: React.FC<UnifiedViewProps> = ({
-  lines,
-  hideUnchanged,
-  lineWrap,
-}) => {
-  // Build unified rows: for modified lines, show delete then add
-  const rows: {
-    key: string;
-    oldNum: number | null;
-    newNum: number | null;
-    prefix: string;
-    content: React.ReactNode;
-    className: string;
-    origIndex: number;
-  }[] = [];
+const UnifiedView: React.FC<UnifiedViewProps> = ({ rows, lineWrap, leftTokens, rightTokens }) => {
+  const rendered: (UnifiedRow | { key: string; gap: number })[] = [];
 
-  let lastWasHidden = false;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!;
-
-    if (hideUnchanged && line.type === 'unchanged') {
-      if (!lastWasHidden) {
-        rows.push({
-          key: `sep-${i}`,
-          oldNum: null,
-          newNum: null,
-          prefix: '',
-          content: '···',
-          className: 'hunk-separator',
-          origIndex: i,
-        });
-        lastWasHidden = true;
-      }
+  for (const row of rows) {
+    if (row.kind === 'gap') {
+      rendered.push({ key: row.key, gap: row.count });
       continue;
     }
-    lastWasHidden = false;
+    const { line, index } = row;
+    const leftTok = line.leftNum != null ? leftTokens?.[line.leftNum - 1] : null;
+    const rightTok = line.rightNum != null ? rightTokens?.[line.rightNum - 1] : null;
 
     if (line.type === 'unchanged') {
-      rows.push({
-        key: `u-${i}`,
+      rendered.push({
+        key: `u${index}`,
+        index,
         oldNum: line.leftNum,
         newNum: line.rightNum,
-        prefix: ' ',
-        content: line.leftContent ?? '',
-        className: 'diff-line-unchanged',
-        origIndex: i,
+        prefix: '',
+        cls: '',
+        content: <LineContent text={line.leftContent!} tokens={leftTok} />,
       });
-    } else if (line.type === 'removed') {
-      rows.push({
-        key: `r-${i}`,
-        oldNum: line.leftNum,
-        newNum: null,
-        prefix: '−',
-        content: line.leftContent ?? '',
-        className: 'diff-line-removed',
-        origIndex: i,
-      });
-    } else if (line.type === 'added') {
-      rows.push({
-        key: `a-${i}`,
-        oldNum: null,
-        newNum: line.rightNum,
-        prefix: '+',
-        content: line.rightContent ?? '',
-        className: 'diff-line-added',
-        origIndex: i,
-      });
-    } else if (line.type === 'modified') {
-      // Show as delete then add
-      rows.push({
-        key: `mr-${i}`,
+      continue;
+    }
+    // Modified lines show as a removal followed by an addition
+    if (line.leftContent != null) {
+      rendered.push({
+        key: `d${index}`,
+        index,
         oldNum: line.leftNum,
         newNum: null,
         prefix: '−',
-        content: renderSpans(line.leftSpans, line.leftContent),
-        className: 'diff-line-removed',
-        origIndex: i,
+        cls: 'is-del',
+        content: <LineContent text={line.leftContent} spans={line.leftSpans} tokens={leftTok} />,
       });
-      rows.push({
-        key: `ma-${i}`,
+    }
+    if (line.rightContent != null) {
+      rendered.push({
+        key: `a${index}`,
+        index,
         oldNum: null,
         newNum: line.rightNum,
         prefix: '+',
-        content: renderSpans(line.rightSpans, line.rightContent),
-        className: 'diff-line-added',
-        origIndex: i,
+        cls: 'is-add',
+        content: <LineContent text={line.rightContent} spans={line.rightSpans} tokens={rightTok} />,
       });
     }
   }
 
-  const contentClass = `diff-line-content${lineWrap ? ' wrap' : ''}`;
-
   return (
-    <div className="diff-panel">
-      <table className="diff-table unified">
-        <colgroup>
-          <col className="diff-col-old-num" />
-          <col className="diff-col-new-num" />
-          <col className="diff-col-prefix" />
-          <col className="diff-col-content" />
-        </colgroup>
-        <tbody>
-          {rows.map((row) => {
-            if (row.className === 'hunk-separator') {
-              return (
-                <tr key={row.key} className="hunk-separator">
-                  <td colSpan={4}>···</td>
-                </tr>
-              );
-            }
-            return (
-              <tr key={row.key} className={row.className} data-diff-line={row.origIndex}>
-                <td className={`diff-line-num ${row.className}`}>
-                  {row.oldNum ?? ''}
-                </td>
-                <td className={`diff-line-num ${row.className}`}>
-                  {row.newNum ?? ''}
-                </td>
-                <td className={`diff-prefix ${row.className}`}>
-                  {row.prefix}
-                </td>
-                <td className={`${contentClass} ${row.className}`}>
-                  {row.content}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <table className={`diff-table unified${lineWrap ? ' is-wrapped' : ''}`}>
+      <colgroup>
+        <col className="col-num" />
+        <col className="col-num" />
+        <col className="col-prefix" />
+        <col className="col-content" />
+      </colgroup>
+      <tbody>
+        {rendered.map((row) =>
+          'gap' in row ? (
+            <GapRow key={row.key} count={row.gap} colSpan={4} />
+          ) : (
+            <tr key={row.key} data-diff-line={row.index}>
+              <td className={`num ${row.cls}`}>{row.oldNum ?? ''}</td>
+              <td className={`num ${row.cls}`}>{row.newNum ?? ''}</td>
+              <td className={`prefix ${row.cls}`}>{row.prefix}</td>
+              <td className={`code ${row.cls}`}>{row.content}</td>
+            </tr>
+          ),
+        )}
+      </tbody>
+    </table>
   );
 };
 
