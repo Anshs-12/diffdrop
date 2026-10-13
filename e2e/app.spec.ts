@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { CHANGED, ORIGINAL, fillEditors, trackErrors } from './helpers';
+import { CHANGED, ORIGINAL, editorText, fillEditors, trackErrors } from './helpers';
 
 test.describe('diffdrop', () => {
   test('loads without errors', async ({ page }) => {
@@ -26,13 +26,11 @@ test.describe('diffdrop', () => {
   test('merges a line across and undoes it', async ({ page }) => {
     await page.goto('/');
     await fillEditors(page, ORIGINAL, CHANGED);
-    const b = page.getByLabel('Changed text');
-
     await page.getByRole('button', { name: /of a to b/ }).first().click();
-    await expect(b).toHaveValue(/function total\(items\) \{/);
+    await expect.poll(() => editorText(page, 'Changed text')).toMatch(/^function total\(items\) \{/);
 
     await page.getByRole('button', { name: 'Undo' }).click();
-    await expect(b).toHaveValue(CHANGED);
+    await expect.poll(() => editorText(page, 'Changed text')).toBe(CHANGED);
   });
 
   test('ignores whitespace when asked', async ({ page }) => {
@@ -47,8 +45,10 @@ test.describe('diffdrop', () => {
     await page.goto('/');
     await fillEditors(page, ORIGINAL, CHANGED);
     await page.getByRole('radio', { name: 'Highlight changes in the editors' }).click();
-    await expect(page.locator('.editor-backdrop .bd-line.is-add')).toHaveCount(2);
-    await expect(page.locator('.editor-backdrop .bd-line.is-del')).toHaveCount(2);
+    await expect(page.locator('.cm-line.cm-diff-add')).toHaveCount(2);
+    await expect(page.locator('.cm-line.cm-diff-del')).toHaveCount(2);
+    await expect(page.locator('.cm-gutterElement.cm-gutter-add')).toHaveCount(2);
+    await expect(page.locator('.cm-line.cm-diff-add .inline-added').first()).toBeVisible();
     await expect(page.locator('.diff-scroll')).toHaveCount(0);
   });
 
@@ -79,8 +79,20 @@ test.describe('diffdrop', () => {
 
     const fresh = await context.newPage();
     await fresh.goto(url);
-    await expect(fresh.getByLabel('Original text')).toHaveValue(ORIGINAL);
-    await expect(fresh.getByLabel('Changed text')).toHaveValue(CHANGED);
+    await expect.poll(() => editorText(fresh, 'Original text')).toBe(ORIGINAL);
+    await expect.poll(() => editorText(fresh, 'Changed text')).toBe(CHANGED);
+  });
+
+  test('finds text anywhere in the diff', async ({ page }) => {
+    await page.goto('/');
+    await fillEditors(page, ORIGINAL, CHANGED);
+    await page.getByLabel('Find in diff').fill('SUM');
+    await expect(page.getByText('1/3')).toBeVisible(); // 3 diff lines mention sum
+    await expect(page.locator('.find-hit').first()).toBeVisible();
+    await page.getByLabel('Find in diff').press('Enter');
+    await expect(page.getByText('2/3')).toBeVisible();
+    await page.getByLabel('Find in diff').fill('no such text');
+    await expect(page.getByText('no matches')).toBeVisible();
   });
 
   test('remembers the chosen theme', async ({ page }) => {

@@ -1,50 +1,105 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * Time from text landing in the editors to the diff table being on screen.
- * Measured today: ~0.7 s for 5k lines and ~2.7 s for 20k lines (almost all of it
- * DOM rendering; the diff itself takes ~15 ms). These limits only guard against
- * regressions; tighten them once the table renders only visible rows.
+ * Time from pasting two texts until the diff is on screen (counts shown and rows
+ * painted), plus how long one scroll frame takes afterwards. Only the visible
+ * rows are rendered, so these should stay flat as files grow.
+ *
+ * Measured on an M-series laptop: 5k ≈ 0.4 s, 20k ≈ 0.3 s, 100k ≈ 0.4 s,
+ * 500k ≈ 1.1–2.4 s (about 0.27 s of each is the deliberate typing debounce).
+ * Before virtualization: 100k took 37.8 s and 500k never finished.
+ * Limits are roughly 2.5× the measurements, to absorb slower machines.
  */
-function fixture(lines: number) {
-  const a = Array.from({ length: lines }, (_, i) => `line ${i} value = ${i * 3};`).join('\n');
-  const b = a
-    .split('\n')
-    .map((l, i) => (i % 40 === 0 ? `${l} // edited` : l))
-    .join('\n');
-  return { a, b };
-}
+const CASES = [
+  { lines: 5_000, budgetMs: 1_500 },
+  { lines: 20_000, budgetMs: 1_500 },
+  { lines: 100_000, budgetMs: 2_000 },
+  { lines: 500_000, budgetMs: 6_000 },
+];
 
-for (const [lines, budgetMs] of [
-  [5_000, 2_500],
-  [20_000, 8_000],
-] as const) {
-  test(`renders a ${lines.toLocaleString()}-line diff within ${budgetMs} ms`, async ({ page }) => {
+test.describe.configure({ mode: 'serial' });
+
+for (const { lines, budgetMs } of CASES) {
+  test(`shows a ${lines.toLocaleString()}-line diff within ${budgetMs.toLocaleString()} ms`, async ({ page }) => {
+    test.setTimeout(90_000);
     await page.goto('/');
-    const { a, b } = fixture(lines);
-    const ms = await page.evaluate(
-      async ({ a, b, lines }) => {
-        const set = (el: HTMLTextAreaElement, v: string) => {
-          Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(el, v);
-          el.dispatchEvent(new Event('input', { bubbles: true }));
+    const edits = Math.ceil(lines / 40);
+
+    const ms = await page.evaluate(async (n) => {
+      const a = Array.from({ length: n }, (_, i) => `line ${i} value = ${i * 3};`).join('\n');
+      const b = a
+        .split('\n')
+        .map((l, i) => (i % 40 === 0 ? `${l} // edited` : l))
+        .join('\n');
+      const paste = (label: string, text: string) => {
+        const el = document.querySelector<HTMLElement>(`[aria-label="${label}"]`)!;
+        el.focus();
+        const data = new DataTransfer();
+        data.setData('text/plain', text);
+        el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+      };
+      const t0 = performance.now();
+      paste('Original text', a);
+      paste('Changed text', b);
+      const expected = `+${Math.ceil(n / 40).toLocaleString()}`;
+      await new Promise<void>((done) => {
+        const check = () => {
+          const summary = document.querySelector('[aria-label="Change summary"]')?.textContent ?? '';
+          const rows = document.querySelectorAll('.diff-table tbody tr[data-row]').length;
+          if (summary.includes(expected) && rows > 10) done();
+          else requestAnimationFrame(check);
         };
-        const [left, right] = document.querySelectorAll('textarea');
-        const t0 = performance.now();
-        set(left!, a);
-        set(right!, b);
-        await new Promise<void>((done) => {
-          const check = () =>
-            document.querySelectorAll('.diff-table tbody tr').length >= lines ? done() : requestAnimationFrame(check);
-          check();
-        });
-        // Wait for the frame after the table is in the DOM to be painted
-        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-        return performance.now() - t0;
-      },
-      { a, b, lines },
+        check();
+      });
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      return performance.now() - t0;
+    }, lines);
+
+    // Only the visible rows exist in the page
+    const rendered = await page.locator('.diff-table tbody tr[data-row]').count();
+    expect(rendered).toBeLessThan(200);
+
+    // One scroll jump to the middle should paint within a couple of frames
+    const scrollMs = await page.evaluate(async () => {
+      const el = document.querySelector('.diff-scroll')!;
+      const t0 = performance.now();
+      el.scrollTop = el.scrollHeight / 2;
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      return performance.now() - t0;
+    });
+
+    console.log(
+      `${lines.toLocaleString()} lines (${edits.toLocaleString()} edits): on screen in ${Math.round(ms)} ms, ` +
+        `scroll frame ${Math.round(scrollMs)} ms, ${rendered} rows in the DOM`,
     );
     test.info().annotations.push({ type: 'render-ms', description: `${Math.round(ms)}` });
-    console.log(`${lines} lines rendered in ${Math.round(ms)} ms`);
     expect(ms).toBeLessThan(budgetMs);
+    expect(scrollMs).toBeLessThan(100);
   });
 }
+
+test('typing in a 100,000-line document stays fast', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.goto('/');
+  const keystrokeMs = await page.evaluate(async () => {
+    const text = Array.from({ length: 100_000 }, (_, i) => `line ${i} value = ${i * 3};`).join('\n');
+    const el = document.querySelector<HTMLElement>('[aria-label="Original text"]')!;
+    el.focus();
+    const data = new DataTransfer();
+    data.setData('text/plain', text);
+    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+    const frame = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    await new Promise((r) => setTimeout(r, 1000));
+    // Cursor sits at the end of the pasted text; time a few keystrokes there
+    const times: number[] = [];
+    for (let i = 0; i < 5; i++) {
+      const t0 = performance.now();
+      document.execCommand('insertText', false, 'x');
+      await frame();
+      times.push(performance.now() - t0);
+    }
+    return Math.max(...times);
+  });
+  console.log(`slowest keystroke in a 100k-line document: ${Math.round(keystrokeMs)} ms`);
+  expect(keystrokeMs).toBeLessThan(100);
+});

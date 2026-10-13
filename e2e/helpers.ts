@@ -21,6 +21,13 @@ export async function fillEditors(page: Page, a: string, b: string) {
   await expect(page.getByLabel('Change summary')).toBeVisible();
 }
 
+/** The text currently in an editor (all lines are rendered for small documents). */
+export async function editorText(page: Page, label: 'Original text' | 'Changed text'): Promise<string> {
+  return page.getByLabel(label).evaluate((el) =>
+    [...el.querySelectorAll('.cm-line')].map((l) => (l.querySelector('.cm-placeholder') ? '' : l.textContent)).join('\n'),
+  );
+}
+
 /** Collect console errors and uncaught exceptions for the whole test. */
 export function trackErrors(page: Page): string[] {
   const errors: string[] = [];
