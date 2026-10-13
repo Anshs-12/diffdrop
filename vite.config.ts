@@ -1,5 +1,7 @@
+import path from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { CSP } from './src/csp';
 
 /** Only applied to builds — the dev server needs a WebSocket for hot reload. */
@@ -20,7 +22,12 @@ function contentSecurityPolicy(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), contentSecurityPolicy()],
+  plugins: [react(), tailwindcss(), contentSecurityPolicy()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
   worker: {
     format: 'es',
   },
