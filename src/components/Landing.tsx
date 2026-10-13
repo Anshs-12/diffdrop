@@ -190,10 +190,15 @@ export const Features: React.FC = () => (
               fewest lines removed and added.
             </p>
             <p>
-              diffdrop runs that same algorithm, right here, in a background thread (a Web Worker) so typing never
-              stutters. Then it runs it again inside every changed line to pinpoint the exact words or characters.
+              diffdrop runs that same algorithm, in the same memory-light form git uses, right here in a background
+              thread so typing never stutters. Then it runs it again inside every changed line to pinpoint the exact
+              words or characters.
             </p>
-            <p>So what you see here is what git would show you. Same answer, no terminal needed.</p>
+            <p>
+              It's built for big files too: half a million lines compare in about a second, and only the lines on
+              screen are ever drawn. For very large files it first lines up the lines that appear exactly once on each
+              side, the same shortcut as git's patience mode.
+            </p>
           </div>
         </div>
         <div className="flex items-center border-t bg-[#0a0a0a] p-5 sm:p-8 lg:border-t-0 lg:border-l">
