@@ -4,11 +4,11 @@ import React, { useEffect, useRef } from 'react';
  * "diffdrop" as ASCII art with a reflection that flows like water.
  *
  * The word is drawn in the site font on an offscreen canvas and sampled cell by
- * cell: each cell becomes a character whose visual weight matches how much of
- * it the letters cover. The letters never change; only the rows underneath them
- * are redrawn, a dozen times a second, as a rippling reflection plus a couple of
- * rolling wave lines. Every line is padded to the same width so nothing shifts.
- * Everything happens in the browser.
+ * cell. The solid inside of the letters is filled with random lowercase letters
+ * and digits that keep changing; the soft edges use light marks (. : ') so the
+ * shape stays crisp. Underneath, a rippling reflection and a couple of rolling
+ * wave lines flow continuously. Every line is padded to the same width, so the
+ * changing characters never move anything. Everything happens in the browser.
  */
 
 const WORD = 'diffdrop';
@@ -19,8 +19,16 @@ const REFLECTION_ROWS = 6;
 const WAVE_ROWS = 2;
 const FRAME_MS = 85;
 
-/** Ordered from lightest to densest. */
-const RAMP = " .'`,:;-~=+il!|1tfjrxnvczuJCLUQ0OZ";
+/** Light marks for the soft edges of the letters, lightest first. */
+const EDGE_RAMP = " .'`,:;-~=+";
+/** Cells at least this covered are part of a letter's solid inside. */
+const SOLID = 0.45;
+/** What the solid inside is made of. */
+const GLYPHS = 'abcdefghijklmnopqrstuvwxyz0123456789';
+/** Share of the solid cells that change on each tick. */
+const SHIMMER = 0.12;
+
+const randomGlyph = () => GLYPHS[Math.floor(Math.random() * GLYPHS.length)]!;
 
 function hash(x: number, y: number): number {
   let h = Math.imul(x, 374761393) ^ Math.imul(y, 668265263);
@@ -28,16 +36,19 @@ function hash(x: number, y: number): number {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
-function pick(coverage: number, x: number, y: number): string {
+/** A light edge mark for partly covered cells (solid cells are filled separately). */
+function edge(coverage: number, x: number, y: number): string {
   if (coverage < 0.04) return ' ';
-  // A little noise so solid areas get texture instead of one repeated character
-  const v = Math.min(1, Math.max(0, coverage + (hash(x, y) - 0.5) * 0.16));
-  return RAMP[Math.max(1, Math.round(v * (RAMP.length - 1)))]!;
+  // A little noise so the edges get texture instead of one repeated mark
+  const v = Math.min(1, Math.max(0, coverage / SOLID + (hash(x, y) - 0.5) * 0.2));
+  return EDGE_RAMP[Math.max(1, Math.min(EDGE_RAMP.length - 1, Math.round(v * (EDGE_RAMP.length - 1))))]!;
 }
 
 interface Art {
-  /** Every row that contains part of a letter (descenders included): never changes. */
-  head: string;
+  /** Rows containing part of a letter, padded to full width; solid cells hold a placeholder. */
+  headRows: string[][];
+  /** [row, col] of every solid cell, flattened. */
+  solid: Int32Array;
   /** Coverage of the rows just above the baseline, nearest first; mirrored into the water. */
   mirror: number[][];
   /** Columns the word spans, for fading the wave lines at the ends. */
@@ -96,7 +107,7 @@ async function build(): Promise<Art> {
     coverage.push(row);
   }
 
-  const lines = coverage.map((row, r) => row.map((v, c) => pick(v, c, r)).join(''));
+  const lines = coverage.map((row, r) => row.map((v, c) => (v >= SOLID ? '#' : edge(v, c, r))).join(''));
   const baselineRow = Math.min(rows - 1, Math.floor((pad + ascent) / cellH));
 
   let top = 0;
@@ -115,13 +126,34 @@ async function build(): Promise<Art> {
     });
   }
 
+  // Padded to full width so the block never changes size (and never shifts)
+  const headRows = lines.slice(top, bottom + 1).map((l) => [...l.padEnd(COLS, ' ')]);
+  const solid: number[] = [];
+  headRows.forEach((row, r) =>
+    row.forEach((ch, c) => {
+      if (ch === '#') {
+        solid.push(r, c);
+        row[c] = randomGlyph();
+      }
+    }),
+  );
+
   return {
-    // Padded to full width so the block never changes size (and never shifts)
-    head: lines.slice(top, bottom + 1).map((l) => l.padEnd(COLS, ' ')).join('\n'),
+    headRows,
+    solid: Int32Array.from(solid),
     mirror: Array.from({ length: REFLECTION_ROWS }, (_, k) => coverage[baselineRow - k] ?? []),
     first,
     last,
   };
+}
+
+/** Re-roll a share of the letters' solid cells and return the text of the letters. */
+function shimmer(art: Art, share: number): string {
+  const { headRows, solid } = art;
+  for (let i = 0; i < solid.length; i += 2) {
+    if (Math.random() < share) headRows[solid[i]!]![solid[i + 1]!] = randomGlyph();
+  }
+  return headRows.map((row) => row.join('')).join('\n');
 }
 
 /** The water under the word at time `t` (seconds): reflection, then rolling waves. */
@@ -188,8 +220,9 @@ const AsciiWordmark: React.FC<{ className?: string }> = ({ className }) => {
     const start = performance.now();
 
     const draw = (now: number) => {
-      if (!art || !waterRef.current) return;
-      waterRef.current.textContent = water(art, (now - start) / 1000);
+      if (!art) return;
+      if (headRef.current) headRef.current.textContent = shimmer(art, SHIMMER);
+      if (waterRef.current) waterRef.current.textContent = water(art, (now - start) / 1000);
     };
 
     const loop = (now: number) => {
@@ -211,7 +244,6 @@ const AsciiWordmark: React.FC<{ className?: string }> = ({ className }) => {
     void build().then((a) => {
       if (!alive) return;
       art = a;
-      if (headRef.current) headRef.current.textContent = a.head;
       draw(start + 1200); // a settled first frame, also the only one with reduced motion
       if (wrapRef.current) io.observe(wrapRef.current);
     });
