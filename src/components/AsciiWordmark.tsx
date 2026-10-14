@@ -5,7 +5,8 @@ import React, { useEffect, useRef } from 'react';
  *
  * The word is drawn in the site font on an offscreen canvas and sampled cell by
  * cell, and drawn only with dots: big dots (•) for the solid inside of the
- * letters, which gently twinkle, and smaller dots (· .) for the soft edges.
+ * letters, with a wave of smaller dots rolling through them from left to right,
+ * and smaller dots (· .) for the soft edges.
  * Underneath, a rippling reflection and a couple of rolling wave lines, also in
  * dots, flow continuously. All three dots are exactly one column wide in Geist
  * Mono, and every line is padded to the same width, so nothing ever moves.
@@ -18,7 +19,7 @@ const COLS = 150;
 const CELL_ASPECT = 1 / 0.6;
 const REFLECTION_ROWS = 6;
 const WAVE_ROWS = 2;
-const FRAME_MS = 85;
+const FRAME_MS = 60;
 
 /** The only characters used: small, medium and big dots (all one column wide). */
 const DOT_S = '.';
@@ -26,12 +27,17 @@ const DOT_M = '·';
 const DOT_L = '•';
 /** Cells at least this covered are part of a letter's solid inside. */
 const SOLID = 0.45;
-/** Share of the solid cells that may change on each tick. */
-const SHIMMER = 0.12;
-/** Chance a changing solid cell dims to a medium dot for a moment (the twinkle). */
-const TWINKLE = 0.18;
+/** The wave rolling through the letters: crests per column, speed (columns/s) and slant per row. */
+const WAVE_FREQ = 0.16;
+const WAVE_SPEED = 14;
+const WAVE_SLANT = 0.3;
 
-const solidDot = () => (Math.random() < TWINKLE ? DOT_M : DOT_L);
+/** Dot size for a solid cell at time t: mostly big dots, with a band of smaller ones in each trough. */
+function waveDot(r: number, c: number, t: number): string {
+  // c - speed·t moves the pattern to the right as time passes
+  const v = Math.sin((c - t * WAVE_SPEED) * WAVE_FREQ + r * WAVE_SLANT);
+  return v > -0.35 ? DOT_L : v > -0.8 ? DOT_M : DOT_S;
+}
 
 function hash(x: number, y: number): number {
   let h = Math.imul(x, 374761393) ^ Math.imul(y, 668265263);
@@ -150,11 +156,13 @@ async function build(): Promise<Art> {
   };
 }
 
-/** Let a share of the letters' solid dots twinkle, and return the text of the letters. */
-function shimmer(art: Art, share: number): string {
+/** Set every solid dot from the wave at time t, and return the text of the letters. */
+function letters(art: Art, t: number): string {
   const { headRows, solid } = art;
   for (let i = 0; i < solid.length; i += 2) {
-    if (Math.random() < share) headRows[solid[i]!]![solid[i + 1]!] = solidDot();
+    const r = solid[i]!;
+    const c = solid[i + 1]!;
+    headRows[r]![c] = waveDot(r, c, t);
   }
   return headRows.map((row) => row.join('')).join('\n');
 }
@@ -220,8 +228,9 @@ const AsciiWordmark: React.FC<{ className?: string }> = ({ className }) => {
 
     const draw = (now: number) => {
       if (!art) return;
-      if (headRef.current) headRef.current.textContent = shimmer(art, SHIMMER);
-      if (waterRef.current) waterRef.current.textContent = water(art, (now - start) / 1000);
+      const t = (now - start) / 1000;
+      if (headRef.current) headRef.current.textContent = letters(art, t);
+      if (waterRef.current) waterRef.current.textContent = water(art, t);
     };
 
     const loop = (now: number) => {
