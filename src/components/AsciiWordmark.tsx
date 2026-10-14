@@ -4,11 +4,12 @@ import React, { useEffect, useRef } from 'react';
  * "diffdrop" as ASCII art with a reflection that flows like water.
  *
  * The word is drawn in the site font on an offscreen canvas and sampled cell by
- * cell. The solid inside of the letters is filled with random lowercase letters
- * and digits that keep changing; the soft edges use light marks (. : ') so the
- * shape stays crisp. Underneath, a rippling reflection and a couple of rolling
- * wave lines flow continuously. Every line is padded to the same width, so the
- * changing characters never move anything. Everything happens in the browser.
+ * cell, and drawn only with dots: big dots (•) for the solid inside of the
+ * letters, which gently twinkle, and smaller dots (· .) for the soft edges.
+ * Underneath, a rippling reflection and a couple of rolling wave lines, also in
+ * dots, flow continuously. All three dots are exactly one column wide in Geist
+ * Mono, and every line is padded to the same width, so nothing ever moves.
+ * Everything happens in the browser.
  */
 
 const WORD = 'diffdrop';
@@ -19,16 +20,18 @@ const REFLECTION_ROWS = 6;
 const WAVE_ROWS = 2;
 const FRAME_MS = 85;
 
-/** Light marks for the soft edges of the letters, lightest first. */
-const EDGE_RAMP = " .'`,:;-~=+";
+/** The only characters used: small, medium and big dots (all one column wide). */
+const DOT_S = '.';
+const DOT_M = '·';
+const DOT_L = '•';
 /** Cells at least this covered are part of a letter's solid inside. */
 const SOLID = 0.45;
-/** What the solid inside is made of. */
-const GLYPHS = 'abcdefghijklmnopqrstuvwxyz0123456789';
-/** Share of the solid cells that change on each tick. */
+/** Share of the solid cells that may change on each tick. */
 const SHIMMER = 0.12;
+/** Chance a changing solid cell dims to a medium dot for a moment (the twinkle). */
+const TWINKLE = 0.18;
 
-const randomGlyph = () => GLYPHS[Math.floor(Math.random() * GLYPHS.length)]!;
+const solidDot = () => (Math.random() < TWINKLE ? DOT_M : DOT_L);
 
 function hash(x: number, y: number): number {
   let h = Math.imul(x, 374761393) ^ Math.imul(y, 668265263);
@@ -36,12 +39,12 @@ function hash(x: number, y: number): number {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
-/** A light edge mark for partly covered cells (solid cells are filled separately). */
+/** A smaller dot for partly covered cells (solid cells are filled separately). */
 function edge(coverage: number, x: number, y: number): string {
-  if (coverage < 0.04) return ' ';
-  // A little noise so the edges get texture instead of one repeated mark
-  const v = Math.min(1, Math.max(0, coverage / SOLID + (hash(x, y) - 0.5) * 0.2));
-  return EDGE_RAMP[Math.max(1, Math.min(EDGE_RAMP.length - 1, Math.round(v * (EDGE_RAMP.length - 1))))]!;
+  if (coverage < 0.06) return ' ';
+  // A little noise so the edge isn't a hard line of identical dots
+  const v = coverage / SOLID + (hash(x, y) - 0.5) * 0.2;
+  return v < 0.45 ? DOT_S : DOT_M;
 }
 
 interface Art {
@@ -133,7 +136,7 @@ async function build(): Promise<Art> {
     row.forEach((ch, c) => {
       if (ch === '#') {
         solid.push(r, c);
-        row[c] = randomGlyph();
+        row[c] = DOT_L;
       }
     }),
   );
@@ -147,11 +150,11 @@ async function build(): Promise<Art> {
   };
 }
 
-/** Re-roll a share of the letters' solid cells and return the text of the letters. */
+/** Let a share of the letters' solid dots twinkle, and return the text of the letters. */
 function shimmer(art: Art, share: number): string {
   const { headRows, solid } = art;
   for (let i = 0; i < solid.length; i += 2) {
-    if (Math.random() < share) headRows[solid[i]!]![solid[i + 1]!] = randomGlyph();
+    if (Math.random() < share) headRows[solid[i]!]![solid[i + 1]!] = solidDot();
   }
   return headRows.map((row) => row.join('')).join('\n');
 }
@@ -174,12 +177,8 @@ function water(art: Art, t: number): string {
       const n = hash(c + 7 * k, tick * 131 + k);
       if (intensity < 0.22 || n > 0.3 + intensity * 0.55) {
         line += ' ';
-      } else if (intensity > 0.6) {
-        line += n < 0.4 ? '~' : '=';
-      } else if (intensity > 0.4) {
-        line += n < 0.5 ? '-' : ':';
       } else {
-        line += n < 0.5 ? '.' : "'";
+        line += intensity > 0.55 && n < 0.5 ? DOT_M : DOT_S;
       }
     }
     out.push(line);
@@ -197,7 +196,7 @@ function water(art: Art, t: number): string {
       const s = Math.sin(c * 0.21 - t * 1.9 + w * 1.7) + 0.6 * Math.sin(c * 0.067 + t * 0.8 - w);
       const fade = Math.min(1, edge) * (1 - w * 0.35);
       const h = hash(c, tick * 17 + w * 5);
-      line += s * fade > 1.05 ? '~' : s * fade > 0.65 && h < 0.6 ? '-' : s * fade > 0.2 && h < 0.18 ? '.' : ' ';
+      line += s * fade > 1.05 ? DOT_M : s * fade > 0.65 && h < 0.6 ? DOT_S : s * fade > 0.2 && h < 0.18 ? DOT_S : ' ';
     }
     out.push(line);
   }
