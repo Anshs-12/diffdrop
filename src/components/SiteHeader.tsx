@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { LogoMark } from './Icons';
+import { REPO_URL } from '@/site';
+import { GitHubIcon, LogoMark } from './Icons';
 
 const SECTIONS = [
   { id: 'try', label: 'Try it' },
@@ -92,6 +93,17 @@ const SiteHeader: React.FC<SiteHeaderProps> = ({ theme, onThemeChange }) => {
           ))}
         </nav>
 
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button asChild variant="outline" size="icon-sm" className="ml-auto bg-card md:ml-2">
+              <a href={REPO_URL} target="_blank" rel="noopener noreferrer" aria-label="diffdrop on GitHub">
+                <GitHubIcon className="size-4" />
+              </a>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Source on GitHub</TooltipContent>
+        </Tooltip>
+
         <ToggleGroup
           type="single"
           variant="outline"
@@ -99,7 +111,7 @@ const SiteHeader: React.FC<SiteHeaderProps> = ({ theme, onThemeChange }) => {
           value={theme}
           onValueChange={(v) => v && onThemeChange(v as ThemeChoice)}
           aria-label="Color theme"
-          className="ml-auto rounded-full bg-card md:ml-2"
+          className="-ml-2 rounded-full bg-card"
         >
           {THEMES.map(({ value, label, Icon }) => (
             <Tooltip key={value}>
