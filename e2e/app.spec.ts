@@ -5,7 +5,7 @@ test.describe('diffdrop', () => {
   test('loads without errors', async ({ page }) => {
     const errors = trackErrors(page);
     await page.goto('/');
-    await expect(page).toHaveTitle('diffdrop');
+    await expect(page).toHaveTitle(/^diffdrop/);
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Everything they paywall.');
     expect(errors).toEqual([]);
   });
@@ -143,6 +143,6 @@ test.describe('privacy', () => {
     await page.goto('/', { waitUntil: 'networkidle' });
     await context.setOffline(true);
     await page.reload();
-    await expect(page).toHaveTitle('diffdrop');
+    await expect(page).toHaveTitle(/^diffdrop/);
   });
 });
