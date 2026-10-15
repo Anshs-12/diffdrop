@@ -76,10 +76,22 @@ export const Hero: React.FC<{ variant: Variant; onTryExample: () => void }> = ({
       </div>
 
       <ul className="mt-10 flex flex-wrap justify-center gap-x-6 gap-y-2 font-mono text-[12.5px] text-muted-foreground">
-        {['unlimited', 'no account', 'works offline', 'your text stays in your browser'].map((t) => (
-          <li key={t} className="inline-flex items-center gap-1.5">
+        {[
+          { label: 'unlimited' },
+          { label: 'no account' },
+          { label: 'works offline' },
+          { label: 'your text stays in your browser' },
+          { label: 'open source', href: REPO_URL },
+        ].map(({ label, href }) => (
+          <li key={label} className="inline-flex items-center gap-1.5">
             <Check className="size-3.5 text-add" aria-hidden="true" />
-            {t}
+            {href ? (
+              <a href={href} target="_blank" rel="noopener noreferrer" className="underline decoration-border underline-offset-4 hover:text-foreground hover:decoration-foreground">
+                {label}
+              </a>
+            ) : (
+              label
+            )}
           </li>
         ))}
       </ul>
