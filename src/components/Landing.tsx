@@ -2,6 +2,7 @@ import React from 'react';
 import {
   ArrowDown,
   ArrowUp,
+  Bug,
   Check,
   Columns2,
   Eraser,
@@ -17,6 +18,7 @@ import {
   WrapText,
 } from 'lucide-react';
 import { CSP_DIRECTIVES } from '@/csp';
+import { REPO_URL } from '@/site';
 import { Button } from '@/components/ui/button';
 import { LogoMark } from './Icons';
 import AsciiWordmark from './AsciiWordmark';
@@ -357,6 +359,11 @@ export const Footer: React.FC = () => (
         </Button>
         <Button asChild variant="ghost" size="sm" className="font-normal text-muted-foreground">
           <a href="#privacy">Privacy</a>
+        </Button>
+        <Button asChild variant="ghost" size="sm" className="font-normal text-muted-foreground">
+          <a href={`${REPO_URL}/issues`} target="_blank" rel="noopener noreferrer">
+            <Bug /> Report a bug
+          </a>
         </Button>
         <Button asChild variant="outline" size="sm" className="rounded-full font-normal">
           <a href="#top">
