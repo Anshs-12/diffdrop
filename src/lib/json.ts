@@ -87,7 +87,12 @@ function findJsonError(text: string): { offset: number; message: string } | null
         i++;
         value();
         ws();
-        if (text[i] === ',') { i++; continue; }
+        if (text[i] === ',') {
+          i++;
+          ws();
+          if (text[i] === '}') fail('Trailing comma before "}"');
+          continue;
+        }
         if (text[i] === '}') { i++; return; }
         fail('Expected "," or "}"');
       }
@@ -98,7 +103,12 @@ function findJsonError(text: string): { offset: number; message: string } | null
       for (;;) {
         value();
         ws();
-        if (text[i] === ',') { i++; continue; }
+        if (text[i] === ',') {
+          i++;
+          ws();
+          if (text[i] === ']') fail('Trailing comma before "]"');
+          continue;
+        }
         if (text[i] === ']') { i++; return; }
         fail('Expected "," or "]"');
       }

@@ -64,7 +64,8 @@ describe('checkJson', () => {
   });
 
   it('describes common mistakes', () => {
-    expect(checkJson('{"a": 1,}')).toMatchObject({ status: 'invalid', message: 'Expected a "quoted" key' });
+    expect(checkJson('{"a": 1,}')).toMatchObject({ status: 'invalid', message: 'Trailing comma before "}"', column: 9 });
+    expect(checkJson('[1, 2,\n]')).toMatchObject({ status: 'invalid', message: 'Trailing comma before "]"', line: 2, column: 1 });
     expect(checkJson("{'a': 1}")).toMatchObject({ status: 'invalid', message: 'Expected a "quoted" key', line: 1, column: 2 });
     expect(checkJson('{"a": 1')).toMatchObject({ status: 'invalid', message: 'Unexpected end of input' });
   });
