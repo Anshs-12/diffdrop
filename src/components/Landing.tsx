@@ -18,7 +18,7 @@ import {
   WrapText,
 } from 'lucide-react';
 import { CSP_DIRECTIVES } from '@/csp';
-import { REPO_URL } from '@/site';
+import { PAGES, REPO_URL, type PageId } from '@/site';
 import type { Variant } from '@/variant';
 import { Button } from '@/components/ui/button';
 import { GitHubIcon } from './Icons';
@@ -417,17 +417,14 @@ export const JsonGuide: React.FC = () => (
 
 const external = { target: '_blank', rel: 'noopener noreferrer' } as const;
 
-export const Footer: React.FC<{ variant: Variant }> = ({ variant }) => (
+export const Footer: React.FC<{ current: PageId }> = ({ current }) => (
   <footer className="border-t">
-    <div className="page flex flex-wrap items-center gap-x-6 gap-y-4 py-10">
+    <div className="page flex flex-wrap items-center gap-x-6 gap-y-4 pt-10 pb-6">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <span className="text-[17px] font-semibold tracking-[-0.02em]">diffdrop</span>
         <span className="font-mono text-xs text-muted-foreground">free, unlimited, and everything stays in this tab</span>
       </div>
       <nav className="ml-auto flex flex-wrap items-center gap-1" aria-label="Footer">
-        <Button asChild variant="ghost" size="sm" className="font-normal text-muted-foreground">
-          {variant === 'json' ? <a href="/">Text diff</a> : <a href="/json-diff/">JSON diff</a>}
-        </Button>
         <Button asChild variant="ghost" size="sm" className="font-normal text-muted-foreground">
           <a href={REPO_URL} {...external}>
             <GitHubIcon className="size-3.5" /> GitHub
@@ -445,5 +442,19 @@ export const Footer: React.FC<{ variant: Variant }> = ({ variant }) => (
         </Button>
       </nav>
     </div>
+    <nav className="page flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-dashed py-5 text-[13.5px]" aria-label="Tools">
+      <span className="font-mono text-xs text-faint">tools</span>
+      {PAGES.map((p) =>
+        p.id === current ? (
+          <span key={p.id} className="font-medium" aria-current="page">
+            {p.name}
+          </span>
+        ) : (
+          <a key={p.id} href={p.path} className="text-muted-foreground hover:text-foreground">
+            {p.name}
+          </a>
+        ),
+      )}
+    </nav>
   </footer>
 );

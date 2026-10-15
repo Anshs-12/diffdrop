@@ -859,6 +859,115 @@
   /* Footer */
 
 
+  /* JSON tool pages */
+
+  .tool-panes {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .tool-panes > * + * {
+    border-left: 1px solid var(--border);
+  }
+
+  .tool-panes-viewer {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  }
+
+  .tool-editor {
+    height: min(68vh, 640px);
+    min-height: 260px;
+    overflow: hidden;
+    resize: vertical;
+  }
+
+  .tool-editor .cm-editor {
+    height: 100%;
+  }
+
+  .cm-error-line {
+    background: var(--del-bg);
+    box-shadow: inset 3px 0 0 var(--del-fg);
+  }
+
+  .tool-tree-panel {
+    height: calc(min(68vh, 640px) + 44px);
+  }
+
+  .tool-tree {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+  }
+
+  .tree-row {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    height: 26px;
+    padding-right: 12px;
+    white-space: nowrap;
+  }
+
+  .tree-row:hover {
+    background: var(--bg-hover);
+  }
+
+  .tree-row.is-hit {
+    background: rgba(250, 204, 21, 0.28);
+  }
+
+  .tree-toggle {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    color: var(--text-muted);
+  }
+
+  button.tree-toggle:hover {
+    background: var(--bg-subtle);
+    color: var(--text);
+  }
+
+  .tree-label {
+    min-width: 0;
+    overflow: hidden;
+    padding: 0 4px;
+    border-radius: 4px;
+    text-align: left;
+    text-overflow: ellipsis;
+    cursor: copy;
+  }
+
+  @media (max-width: 900px) {
+    .tool-panes,
+    .tool-panes-viewer {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tool-panes > * + * {
+      border-left: 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .tool-editor {
+      height: 320px;
+    }
+
+    .tool-tree-panel {
+      height: 480px;
+    }
+  }
+
   @media (max-width: 720px) {
     .page,
     .page-wide {

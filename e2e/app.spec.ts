@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { CHANGED, ORIGINAL, editorText, fillEditors, trackErrors } from './helpers';
+import { CHANGED, ORIGINAL, editorText, fillEditors, trackErrors, trackOutgoing } from './helpers';
 
 test.describe('diffdrop', () => {
   test('loads without errors', async ({ page }) => {
@@ -114,8 +114,7 @@ test.describe('privacy', () => {
 
   test('makes no network requests while diffing', async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
-    const requests: string[] = [];
-    page.on('request', (r) => requests.push(r.url()));
+    const requests = trackOutgoing(page);
 
     await fillEditors(page, ORIGINAL, CHANGED);
     await page.getByRole('radio', { name: 'Unified' }).click();

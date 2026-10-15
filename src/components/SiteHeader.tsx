@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Monitor, Moon, Sun } from 'lucide-react';
 import type { ThemeChoice } from '@/lib/theme';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +8,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { REPO_URL } from '@/site';
 import { GitHubIcon, LogoMark } from './Icons';
 
-const SECTIONS = [
+export interface HeaderSection {
+  id: string;
+  label: string;
+}
+
+/** Sections of the diff pages; tool pages pass their own. */
+export const DIFF_SECTIONS: HeaderSection[] = [
   { id: 'try', label: 'Try it' },
   { id: 'features', label: 'Features' },
   { id: 'free', label: 'Why free' },
@@ -43,15 +49,16 @@ function useActiveSection(ids: string[]): string | null {
   return active;
 }
 
-const SECTION_IDS = SECTIONS.map((s) => s.id);
 
 interface SiteHeaderProps {
+  sections?: HeaderSection[];
   theme: ThemeChoice;
   onThemeChange: (choice: ThemeChoice) => void;
 }
 
-const SiteHeader: React.FC<SiteHeaderProps> = ({ theme, onThemeChange }) => {
-  const active = useActiveSection(SECTION_IDS);
+const SiteHeader: React.FC<SiteHeaderProps> = ({ sections = DIFF_SECTIONS, theme, onThemeChange }) => {
+  const ids = useMemo(() => sections.map((s) => s.id), [sections]);
+  const active = useActiveSection(ids);
 
   return (
     <header className="site-header">
@@ -78,7 +85,7 @@ const SiteHeader: React.FC<SiteHeaderProps> = ({ theme, onThemeChange }) => {
         </Tooltip>
 
         <nav className="ml-auto hidden items-center gap-1 md:flex" aria-label="Sections">
-          {SECTIONS.map(({ id, label }) => (
+          {sections.map(({ id, label }) => (
             <Button
               key={id}
               asChild

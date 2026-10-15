@@ -576,7 +576,7 @@ const App: React.FC<{ variant: Variant }> = ({ variant }) => {
         <Paywall />
         <Privacy />
       </main>
-      <Footer variant={variant} />
+      <Footer current={isJson ? 'json-diff' : 'home'} />
 
       {printing && result && printModel && (
         <div className="print-only">

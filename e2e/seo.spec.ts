@@ -20,7 +20,9 @@ test.describe('search and sharing', () => {
     const sitemap = await request.get('/sitemap.xml');
     const xml = await sitemap.text();
     expect(xml).toContain('<urlset');
-    expect(xml).toMatch(/<loc>https:\/\/[^<]+\/json-diff\/<\/loc>/);
+    for (const path of ['/', '/json-diff/', '/json-formatter/', '/json-validator/', '/json-to-csv/', '/json-to-yaml/', '/json-viewer/']) {
+      expect(xml).toContain(`${path}</loc>`);
+    }
 
     const og = await request.get('/og.png');
     expect(og.headers()['content-type']).toBe('image/png');
@@ -40,7 +42,7 @@ test.describe('search and sharing', () => {
     await expect(footer.getByRole('link', { name: 'GitHub' })).toHaveAttribute('target', '_blank');
     await expect(page.getByRole('link', { name: 'diffdrop on GitHub' })).toHaveAttribute('rel', 'noopener noreferrer');
     await expect(page.getByRole('link', { name: 'open source' })).toHaveAttribute('href', /github\.com\/Anshs-12\/diffdrop$/);
-    await expect(footer.getByRole('link', { name: 'JSON diff' })).toHaveAttribute('href', '/json-diff/');
+    await expect(page.getByRole('navigation', { name: 'Tools' }).getByRole('link', { name: 'JSON diff' })).toHaveAttribute('href', '/json-diff/');
   });
 });
 
@@ -51,14 +53,14 @@ test.describe('/json-diff', () => {
     expect(await page.locator('link[rel="canonical"]').getAttribute('href')).toMatch(/\/json-diff\/$/);
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Compare JSON online.');
     await expect(page.getByRole('heading', { name: 'How to compare two JSON files' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Text diff' })).toHaveAttribute('href', '/');
+    await expect(page.getByRole('navigation', { name: 'Tools' }).getByRole('link', { name: 'Diff checker' })).toHaveAttribute('href', '/');
   });
 
   test('flags invalid JSON with its line and column', async ({ page }) => {
     await page.goto('/json-diff/');
     await fillEditors(page, '{\n  "a": 1,\n}\n', '{"a": 2}\n');
     const status = page.getByLabel('JSON status');
-    await expect(status).toContainText('a: Expected a "quoted" key at line 3, column 1');
+    await expect(status).toContainText('a: Trailing comma before "}" at line 3, column 1');
     await expect(status).toContainText('b: valid JSON');
   });
 

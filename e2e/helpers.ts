@@ -28,6 +28,20 @@ export async function editorText(page: Page, label: 'Original text' | 'Changed t
   );
 }
 
+/**
+ * Record requests that could carry data out: anything to another origin, or any
+ * non-GET. Lazily loaded code from the site's own /assets/ is not counted.
+ */
+export function trackOutgoing(page: Page): string[] {
+  const out: string[] = [];
+  page.on('request', (r) => {
+    const url = new URL(r.url());
+    const ownAsset = url.origin === new URL(page.url()).origin && r.method() === 'GET' && url.pathname.startsWith('/assets/');
+    if (!ownAsset) out.push(`${r.method()} ${r.url()}`);
+  });
+  return out;
+}
+
 /** Collect console errors and uncaught exceptions for the whole test. */
 export function trackErrors(page: Page): string[] {
   const errors: string[] = [];
