@@ -16,6 +16,7 @@ export interface HeaderSection {
 /** Sections of the diff pages; tool pages pass their own. */
 export const DIFF_SECTIONS: HeaderSection[] = [
   { id: 'try', label: 'Try it' },
+  { id: 'tools', label: 'Tools' },
   { id: 'features', label: 'Features' },
   { id: 'free', label: 'Why free' },
   { id: 'privacy', label: 'Privacy' },

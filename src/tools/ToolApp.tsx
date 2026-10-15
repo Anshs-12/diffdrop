@@ -1,11 +1,10 @@
 import { lazy, Suspense } from 'react';
-import { ArrowRight } from 'lucide-react';
-import { pageById, TOOL_PAGES, type PageId } from '@/site';
+import type { PageId } from '@/site';
 import { useTheme } from '@/lib/theme';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import SiteHeader, { type HeaderSection } from '@/components/SiteHeader';
-import { Footer, Privacy } from '@/components/Landing';
+import { Footer, Privacy, ToolCards } from '@/components/Landing';
 import { TOOL_CONTENT } from './content';
 
 const TOOLS = {
@@ -21,7 +20,7 @@ type ToolId = keyof typeof TOOLS;
 const SECTIONS: HeaderSection[] = [
   { id: 'tool', label: 'Tool' },
   { id: 'how', label: 'How it works' },
-  { id: 'more', label: 'More tools' },
+  { id: 'tools', label: 'More tools' },
   { id: 'privacy', label: 'Privacy' },
 ];
 
@@ -82,22 +81,7 @@ export default function ToolApp({ page }: { page: PageId }) {
           </div>
         </section>
 
-        <section id="more" className="border-t py-16 sm:py-20">
-          <div className="page">
-            <h2 className="text-[clamp(26px,3.6vw,36px)] leading-[1.1] font-semibold tracking-[-0.03em]">More free tools</h2>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {[pageById('home'), ...TOOL_PAGES.filter((p) => p.id !== page)].map((p) => (
-                <a key={p.id} href={p.path} className="group rounded-2xl border p-5 transition-colors hover:bg-muted/60">
-                  <span className="flex items-center justify-between font-semibold tracking-[-0.01em]">
-                    {p.name}
-                    <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                  </span>
-                  <span className="mt-1 block text-[14.5px] text-muted-foreground">{p.blurb}</span>
-                </a>
-              ))}
-            </div>
-          </div>
-        </section>
+        <ToolCards current={page} />
 
         <Privacy />
       </main>

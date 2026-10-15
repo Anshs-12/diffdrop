@@ -41,8 +41,18 @@ test.describe('search and sharing', () => {
     await expect(footer.getByRole('link', { name: 'report a bug / request a feature' })).toHaveAttribute('href', /github\.com\/.+\/issues$/);
     await expect(footer.getByRole('link', { name: 'GitHub' })).toHaveAttribute('target', '_blank');
     await expect(page.getByRole('link', { name: 'diffdrop on GitHub' })).toHaveAttribute('rel', 'noopener noreferrer');
-    await expect(page.getByRole('link', { name: 'open source' })).toHaveAttribute('href', /github\.com\/Anshs-12\/diffdrop$/);
+    await expect(page.getByRole('link', { name: 'open source', exact: true })).toHaveAttribute('href', /github\.com\/Anshs-12\/diffdrop$/);
+    await expect(page.getByRole('heading', { level: 1 }).getByRole('link', { name: 'Open source.' })).toHaveAttribute('href', /github\.com\/Anshs-12\/diffdrop$/);
     await expect(page.getByRole('navigation', { name: 'Tools' }).getByRole('link', { name: 'JSON diff' })).toHaveAttribute('href', '/json-diff/');
+  });
+
+  test('landing page has a card for every tool', async ({ page }) => {
+    await page.goto('/');
+    const tools = page.locator('#tools');
+    for (const path of ['/json-diff/', '/json-formatter/', '/json-validator/', '/json-to-csv/', '/json-to-yaml/', '/json-viewer/']) {
+      await expect(tools.locator(`a[href="${path}"]`)).toBeVisible();
+    }
+    await expect(tools.locator('a[href="/"]')).toHaveCount(0);
   });
 });
 

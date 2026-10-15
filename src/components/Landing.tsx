@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   ArrowDown,
+  ArrowRight,
   ArrowUp,
   Bug,
   Check,
@@ -18,7 +19,7 @@ import {
   WrapText,
 } from 'lucide-react';
 import { CSP_DIRECTIVES } from '@/csp';
-import { PAGES, REPO_URL, type PageId } from '@/site';
+import { PAGES, REPO_URL, TOOL_PAGES, pageById, type PageId } from '@/site';
 import type { Variant } from '@/variant';
 import { Button } from '@/components/ui/button';
 import { GitHubIcon } from './Icons';
@@ -51,8 +52,16 @@ export const Hero: React.FC<{ variant: Variant; onTryExample: () => void }> = ({
       <h1 className="mt-7 text-[clamp(40px,7vw,80px)] leading-[1.02] font-semibold tracking-[-0.045em]">
         {HERO[variant].lead}
         <br />
-        <span className="mt-[0.14em] inline-block rounded-[0.14em] bg-add-bg px-[0.16em] pb-[0.03em] leading-[1.02] text-add">
-          Free.
+        <span className="mt-[0.14em] inline-flex flex-wrap justify-center gap-x-[0.24em] gap-y-[0.1em]">
+          <span className="inline-block rounded-[0.14em] bg-add-bg px-[0.16em] pb-[0.03em] leading-[1.02] text-add">Free.</span>
+          <a
+            href={REPO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block rounded-[0.14em] bg-add-bg px-[0.16em] pb-[0.03em] leading-[1.02] text-add transition-opacity hover:opacity-80"
+          >
+            Open source.
+          </a>
         </span>
       </h1>
       <p className="mt-4 text-[clamp(20px,2.6vw,28px)] font-medium tracking-[-0.02em] text-muted-foreground">
@@ -414,6 +423,35 @@ export const JsonGuide: React.FC = () => (
     </div>
   </section>
 );
+
+// ─────────────────────────────────────────────────────────────
+// Tool cards (links to every other page)
+// ─────────────────────────────────────────────────────────────
+
+export const ToolCards: React.FC<{ current: PageId }> = ({ current }) => {
+  const pages = [pageById('home'), ...TOOL_PAGES].filter((p) => p.id !== current);
+  return (
+    <section id="tools" className="scroll-mt-20 border-t py-20 sm:py-28">
+      <div className="page">
+        <SectionTitle eyebrow="more free tools" title="Everything for JSON, in your browser.">
+          Format, validate, convert and explore JSON. Same deal: free, open source, and nothing leaves this tab.
+        </SectionTitle>
+        <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {pages.map((p) => (
+            <a key={p.id} href={p.path} className="group rounded-2xl border p-5 transition-colors hover:bg-muted/60">
+              <span className="flex items-center justify-between font-semibold tracking-[-0.01em]">
+                {p.name}
+                <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+              </span>
+              <span className="mt-1 block text-[14.5px] text-muted-foreground">{p.blurb}</span>
+              <span className="mt-3 block font-mono text-xs text-faint">{p.path}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
 
 const external = { target: '_blank', rel: 'noopener noreferrer' } as const;
 

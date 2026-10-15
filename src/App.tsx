@@ -25,7 +25,7 @@ import DiffViewport, { type DiffViewportHandle } from '@/components/DiffViewport
 import { FullSplitTable, type RowContext } from '@/components/DiffRows';
 import FindBar from '@/components/FindBar';
 import SummaryPanel from '@/components/SummaryPanel';
-import { Features, Footer, Hero, JsonGuide, Paywall, Privacy } from '@/components/Landing';
+import { Features, Footer, Hero, JsonGuide, Paywall, Privacy, ToolCards } from '@/components/Landing';
 import { LogoMark } from '@/components/Icons';
 
 interface Snapshot {
@@ -572,6 +572,7 @@ const App: React.FC<{ variant: Variant }> = ({ variant }) => {
         </section>
 
         {isJson && <JsonGuide />}
+        <ToolCards current={isJson ? 'json-diff' : 'home'} />
         <Features />
         <Paywall />
         <Privacy />
