@@ -1,9 +1,10 @@
 # diffdrop
 
-Everything they paywall. Free. Nothing leaves your browser.
+Everything they paywall. Free. Your text stays in your browser.
 
 diffdrop is a diff checker that runs entirely in your browser: unlimited use,
-no account, nothing uploaded. It lives at [diffdrop.me](https://diffdrop.me).
+no account, nothing uploaded. It lives at
+[diffdrop.anshx12.workers.dev](https://diffdrop.anshx12.workers.dev).
 
 ## Features
 

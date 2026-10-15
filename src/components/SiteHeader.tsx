@@ -72,7 +72,7 @@ const SiteHeader: React.FC<SiteHeaderProps> = ({ theme, onThemeChange }) => {
             </Badge>
           </TooltipTrigger>
           <TooltipContent className="max-w-60 text-center">
-            Your text never leaves this tab. The page is blocked from making network requests.
+            Your text never leaves this tab: no uploads, no accounts.
           </TooltipContent>
         </Tooltip>
 

@@ -57,7 +57,7 @@ export const Hero: React.FC<{ variant: Variant; onTryExample: () => void }> = ({
         </span>
       </h1>
       <p className="mt-4 text-[clamp(20px,2.6vw,28px)] font-medium tracking-[-0.02em] text-muted-foreground">
-        Nothing leaves your browser.
+        Your text stays in your browser.
       </p>
 
       <p className="mt-6 max-w-[52ch] text-[16px] text-muted-foreground">
@@ -76,7 +76,7 @@ export const Hero: React.FC<{ variant: Variant; onTryExample: () => void }> = ({
       </div>
 
       <ul className="mt-10 flex flex-wrap justify-center gap-x-6 gap-y-2 font-mono text-[12.5px] text-muted-foreground">
-        {['unlimited', 'no account', 'works offline', '0 network requests'].map((t) => (
+        {['unlimited', 'no account', 'works offline', 'your text stays in your browser'].map((t) => (
           <li key={t} className="inline-flex items-center gap-1.5">
             <Check className="size-3.5 text-add" aria-hidden="true" />
             {t}
