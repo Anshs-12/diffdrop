@@ -858,32 +858,6 @@
 
   /* Footer */
 
-  /* ASCII wordmark: 150 columns of tiny mono text; Geist Mono is 0.6em wide,
-     so 150 columns = 90em. Shrinks to fit narrow screens. */
-  .ascii-wordmark {
-    /* Exactly 150 columns wide, fixed, so the animated rows can't move anything */
-    width: 90em;
-    margin: 0 auto;
-    overflow: hidden;
-    font-family: var(--font-mono);
-    font-size: min(6.4px, calc((100vw - 40px) / 90));
-    line-height: 1;
-    letter-spacing: 0;
-    color: var(--text-muted);
-    white-space: pre;
-    user-select: none;
-  }
-
-  /* Two stacked layers in the same grid: the still letters, then the moving water */
-  .ascii-wordmark pre {
-    margin: 0;
-    font: inherit;
-    white-space: pre;
-  }
-
-  .ascii-water {
-    color: var(--text-faint);
-  }
 
   @media (max-width: 720px) {
     .page,

@@ -21,8 +21,7 @@ import { CSP_DIRECTIVES } from '@/csp';
 import { REPO_URL } from '@/site';
 import type { Variant } from '@/variant';
 import { Button } from '@/components/ui/button';
-import { LogoMark } from './Icons';
-import AsciiWordmark from './AsciiWordmark';
+import { GitHubIcon } from './Icons';
 
 const Key: React.FC<{ children: React.ReactNode }> = ({ children }) => <kbd className="kbd-inline">{children}</kbd>;
 
@@ -416,27 +415,27 @@ export const JsonGuide: React.FC = () => (
   </section>
 );
 
+const external = { target: '_blank', rel: 'noopener noreferrer' } as const;
+
 export const Footer: React.FC<{ variant: Variant }> = ({ variant }) => (
-  <footer className="overflow-hidden border-t">
-    <div className="page flex flex-wrap items-center gap-x-6 gap-y-3 pt-10 pb-2">
-      <span className="flex items-center gap-2.5">
-        <LogoMark size={26} />
+  <footer className="border-t">
+    <div className="page flex flex-wrap items-center gap-x-6 gap-y-4 py-10">
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <span className="text-[17px] font-semibold tracking-[-0.02em]">diffdrop</span>
-      </span>
-      <span className="font-mono text-xs text-muted-foreground">free, unlimited, and everything stays in this tab</span>
+        <span className="font-mono text-xs text-muted-foreground">free, unlimited, and everything stays in this tab</span>
+      </div>
       <nav className="ml-auto flex flex-wrap items-center gap-1" aria-label="Footer">
         <Button asChild variant="ghost" size="sm" className="font-normal text-muted-foreground">
           {variant === 'json' ? <a href="/">Text diff</a> : <a href="/json-diff/">JSON diff</a>}
         </Button>
         <Button asChild variant="ghost" size="sm" className="font-normal text-muted-foreground">
-          <a href="#features">Features</a>
+          <a href={REPO_URL} {...external}>
+            <GitHubIcon className="size-3.5" /> GitHub
+          </a>
         </Button>
         <Button asChild variant="ghost" size="sm" className="font-normal text-muted-foreground">
-          <a href="#privacy">Privacy</a>
-        </Button>
-        <Button asChild variant="ghost" size="sm" className="font-normal text-muted-foreground">
-          <a href={`${REPO_URL}/issues`} target="_blank" rel="noopener noreferrer">
-            <Bug /> Report a bug
+          <a href={`${REPO_URL}/issues`} {...external}>
+            <Bug /> report a bug / request a feature
           </a>
         </Button>
         <Button asChild variant="outline" size="sm" className="rounded-full font-normal">
@@ -445,9 +444,6 @@ export const Footer: React.FC<{ variant: Variant }> = ({ variant }) => (
           </a>
         </Button>
       </nav>
-    </div>
-    <div className="page pt-8 pb-10">
-      <AsciiWordmark />
     </div>
   </footer>
 );
