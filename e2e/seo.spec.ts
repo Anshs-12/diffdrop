@@ -6,7 +6,7 @@ test.describe('search and sharing', () => {
     await page.goto('/');
     await expect(page).toHaveTitle('diffdrop - free diff checker, runs in your browser');
     const meta = (sel: string) => page.locator(sel).first().getAttribute('content');
-    expect(await meta('meta[name="description"]')).toContain('Compare two texts');
+    expect(await meta('meta[name="description"]')).toContain('Compare text, code and JSON side by side');
     expect(await page.locator('link[rel="canonical"]').getAttribute('href')).toMatch(/^https:\/\/.+\/$/);
     expect(await meta('meta[property="og:image"]')).toMatch(/^https:\/\/.+\/og\.png$/);
     expect(await meta('meta[name="twitter:card"]')).toBe('summary_large_image');
@@ -33,10 +33,14 @@ test.describe('search and sharing', () => {
     expect(html).toContain('<meta name="robots" content="noindex" />');
   });
 
-  test('footer links to bug reports and the JSON page', async ({ page }) => {
+  test('header and footer link to GitHub, issues and the JSON page', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('link', { name: 'Report a bug' })).toHaveAttribute('href', /github\.com\/.+\/issues$/);
-    await expect(page.getByRole('link', { name: 'JSON diff' })).toHaveAttribute('href', '/json-diff/');
+    const footer = page.getByRole('navigation', { name: 'Footer' });
+    await expect(footer.getByRole('link', { name: 'report a bug / request a feature' })).toHaveAttribute('href', /github\.com\/.+\/issues$/);
+    await expect(footer.getByRole('link', { name: 'GitHub' })).toHaveAttribute('target', '_blank');
+    await expect(page.getByRole('link', { name: 'diffdrop on GitHub' })).toHaveAttribute('rel', 'noopener noreferrer');
+    await expect(page.getByRole('link', { name: 'open source' })).toHaveAttribute('href', /github\.com\/Anshs-12\/diffdrop$/);
+    await expect(footer.getByRole('link', { name: 'JSON diff' })).toHaveAttribute('href', '/json-diff/');
   });
 });
 
