@@ -32,7 +32,7 @@ const Key: React.FC<{ children: React.ReactNode }> = ({ children }) => <kbd clas
 const HERO = {
   text: {
     lead: 'Everything they paywall.',
-    lede: 'A free diff checker that runs entirely in your browser. Unlimited use, no account, nothing uploaded.',
+    lede: 'A free, open source diff checker that runs entirely in your browser. Unlimited use, no account, nothing uploaded.',
   },
   json: {
     lead: 'Compare JSON online.',
