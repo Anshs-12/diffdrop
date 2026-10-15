@@ -37,3 +37,23 @@ export function renderCart(items, coupon) {
   return \`Total: \${formatPrice(total)} · Shipping: \${shipping}\`;
 }
 `;
+
+/** JSON example for the /json-diff page: keys reordered, values changed, a key added and removed. */
+export const SAMPLE_JSON_ORIGINAL = `{
+  "name": "diffdrop",
+  "version": "1.4.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "lz-string": "^1.5.0"
+  },
+  "license": "MIT"
+}
+`;
+
+export const SAMPLE_JSON_CHANGED = `{"name":"diffdrop","private":true,"version":"1.5.0","scripts":{"build":"tsc -b && vite build","dev":"vite","test":"vitest run"},"dependencies":{"lz-string":"^1.5.0","react":"^19.1.0","@codemirror/view":"^6.43.0"}}
+`;

@@ -9,7 +9,10 @@ import { generatePatch } from '@/lib/patch';
 import { applyMerge } from '@/lib/merge';
 import { decodeHash, encodeHash } from '@/lib/share';
 import { useTheme } from '@/lib/theme';
-import { SAMPLE_CHANGED, SAMPLE_ORIGINAL } from '@/lib/sample';
+import { SAMPLE_CHANGED, SAMPLE_JSON_CHANGED, SAMPLE_JSON_ORIGINAL, SAMPLE_ORIGINAL } from '@/lib/sample';
+import { checkJson, formatJson } from '@/lib/json';
+import type { Variant } from '@/variant';
+import JsonBar from '@/components/JsonBar';
 import { detectLang } from '@/lib/syntax';
 import { summarizeDiff } from '@/lib/summary';
 import { Button } from '@/components/ui/button';
@@ -22,7 +25,7 @@ import DiffViewport, { type DiffViewportHandle } from '@/components/DiffViewport
 import { FullSplitTable, type RowContext } from '@/components/DiffRows';
 import FindBar from '@/components/FindBar';
 import SummaryPanel from '@/components/SummaryPanel';
-import { Features, Footer, Hero, Paywall, Privacy } from '@/components/Landing';
+import { Features, Footer, Hero, JsonGuide, Paywall, Privacy } from '@/components/Landing';
 import { LogoMark } from '@/components/Icons';
 
 interface Snapshot {
@@ -62,7 +65,8 @@ function hunkLine(lines: DiffLine[], hunk: Hunk, side: 'leftNum' | 'rightNum'): 
   return 1;
 }
 
-const App: React.FC = () => {
+const App: React.FC<{ variant: Variant }> = ({ variant }) => {
+  const isJson = variant === 'json';
   const { choice: theme, resolved: resolvedTheme, setChoice: setTheme } = useTheme();
 
   // Decode shared texts from the URL fragment on first render
@@ -203,7 +207,7 @@ const App: React.FC = () => {
     setOriginalText(entry.original);
     setChangedText(entry.changed);
     setUndoStack((s) => s.slice(0, -1));
-    notify('Merge undone');
+    notify('Undone');
   }, [undoStack]);
 
   // ── Hunk navigation ──
@@ -293,11 +297,39 @@ const App: React.FC = () => {
   }, [originalText, changedText, originalName, changedName]);
 
   const handleExample = useCallback(() => {
-    setOriginal(SAMPLE_ORIGINAL, 'cart.js');
-    setChanged(SAMPLE_CHANGED, 'cart.js');
+    if (isJson) {
+      setOriginal(SAMPLE_JSON_ORIGINAL, 'package.json');
+      setChanged(SAMPLE_JSON_CHANGED, 'package.json');
+    } else {
+      setOriginal(SAMPLE_ORIGINAL, 'cart.js');
+      setChanged(SAMPLE_CHANGED, 'cart.js');
+    }
     setUndoStack([]);
     document.getElementById('try')?.scrollIntoView({ behavior: 'smooth' });
-  }, [setOriginal, setChanged]);
+  }, [isJson, setOriginal, setChanged]);
+
+  // ── JSON page ──
+
+  const leftJson = useMemo(() => (isJson ? checkJson(originalText) : null), [isJson, originalText]);
+  const rightJson = useMemo(() => (isJson ? checkJson(changedText) : null), [isJson, changedText]);
+
+  const handleFormatJson = useCallback(() => {
+    const a = formatJson(originalText);
+    const b = formatJson(changedText);
+    if (a == null && b == null) {
+      toast.error('Neither side is valid JSON yet');
+      return;
+    }
+    if ((a ?? originalText) === originalText && (b ?? changedText) === changedText) {
+      notify('Already formatted');
+      return;
+    }
+    pushUndo();
+    if (a != null) setOriginalText(a);
+    if (b != null) setChangedText(b);
+    if (a == null || b == null) toast(`Formatted ${a == null ? 'b' : 'a'} only; the other side isn't valid JSON`);
+    else toast.success('Formatted both sides, keys sorted A–Z');
+  }, [originalText, changedText, pushUndo]);
 
   const patch = useCallback(
     () => (result ? generatePatch(lines, result.eof, originalName ?? 'original', changedName ?? 'changed') : ''),
@@ -453,7 +485,7 @@ const App: React.FC = () => {
     <TooltipProvider delayDuration={300}>
       <SiteHeader theme={theme} onThemeChange={setTheme} />
       <main>
-        <Hero onTryExample={handleExample} />
+        <Hero variant={variant} onTryExample={handleExample} />
 
         <section className="scroll-mt-20 pb-20" id="try" aria-label="Compare texts">
           <div className="page-wide">
@@ -490,6 +522,10 @@ const App: React.FC = () => {
                   diffKey={result}
                   onClose={() => setSummaryOpen(false)}
                 />
+              )}
+
+              {isJson && leftJson && rightJson && (
+                <JsonBar left={leftJson} right={rightJson} onFormat={handleFormatJson} />
               )}
 
               <EditorPanel
@@ -535,11 +571,12 @@ const App: React.FC = () => {
           </div>
         </section>
 
+        {isJson && <JsonGuide />}
         <Features />
         <Paywall />
         <Privacy />
       </main>
-      <Footer />
+      <Footer variant={variant} />
 
       {printing && result && printModel && (
         <div className="print-only">

@@ -10,4 +10,5 @@ export const REPO_URL = 'https://github.com/Anshs-12/diffdrop';
 /** Every indexable page, for sitemap.xml. Paths end in "/" (directory index). */
 export const PAGES: { path: string; priority: number }[] = [
   { path: '/', priority: 1.0 },
+  { path: '/json-diff/', priority: 0.8 },
 ];

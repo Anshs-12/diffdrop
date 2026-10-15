@@ -62,4 +62,13 @@ export default defineConfig({
   worker: {
     format: 'es',
   },
+  build: {
+    // One HTML page per route (each with its own title, description and canonical URL)
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        json: path.resolve(__dirname, 'json-diff/index.html'),
+      },
+    },
+  },
 });
