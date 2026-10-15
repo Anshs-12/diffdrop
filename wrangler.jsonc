@@ -1,0 +1,12 @@
+// Cloudflare Workers deployment: a static site served from the Vite build.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "diffdrop",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./dist",
+    // Unknown URLs get dist/404.html with a real 404 status, instead of the
+    // app with 200 (which search engines read as endless duplicate pages)
+    "not_found_handling": "404-page"
+  }
+}

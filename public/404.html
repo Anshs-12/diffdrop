@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'" />
+    <meta name="robots" content="noindex" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Page not found · diffdrop</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0a0a'/%3E%3Crect x='8' y='9' width='10' height='3' rx='1.5' fill='%23e8908e'/%3E%3Crect x='8' y='14.5' width='16' height='3' rx='1.5' fill='%23fafafa' opacity='.55'/%3E%3Crect x='14' y='20' width='10' height='3' rx='1.5' fill='%239ccb84'/%3E%3C/svg%3E"
+    />
+    <style>
+      :root { --bg: #f6f6f3; --text: #0a0a0a; --muted: #5c5c5c; --line: #e0e0da; --del: #ffe1dd; --del-fg: #b3261e; --add: #d7f5df; --add-fg: #11672b; }
+      @media (prefers-color-scheme: dark) {
+        :root { --bg: #0a0a0a; --text: #fafafa; --muted: #a3a3a3; --line: #242424; --del: rgba(255,82,70,.17); --del-fg: #ff8a80; --add: rgba(46,204,113,.17); --add-fg: #5be08f; }
+      }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--text);
+        font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; }
+      main { max-width: 460px; padding: 24px; }
+      pre { margin: 0 0 24px; padding: 12px 0; border: 1px solid var(--line); border-radius: 12px;
+        font: 13px/1.8 ui-monospace, 'SF Mono', Menlo, monospace; overflow: hidden; }
+      pre span { display: block; padding: 0 14px; }
+      .del { background: var(--del); color: var(--del-fg); }
+      .add { background: var(--add); color: var(--add-fg); }
+      h1 { margin: 0; font-size: 28px; letter-spacing: -0.03em; }
+      p { color: var(--muted); }
+      a { display: inline-block; margin-top: 8px; padding: 9px 18px; border-radius: 999px; background: var(--text); color: var(--bg); text-decoration: none; font-weight: 500; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <pre aria-hidden="true"><span class="del">- this page</span><span class="add">+ 404: not found</span></pre>
+      <h1>This page doesn't exist</h1>
+      <p>The link may be mistyped or out of date. The diff checker itself is one click away.</p>
+      <a href="/">Go to diffdrop</a>
+    </main>
+  </body>
+</html>
