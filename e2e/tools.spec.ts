@@ -30,7 +30,28 @@ for (const tool of TOOLS) {
     await expect(tools.getByRole('link')).toHaveCount(6);
     expect(errors).toEqual([]);
   });
+
+  test(`${tool.path} serves its content and FAQ data in the static HTML`, async ({ request }) => {
+    const html = await (await request.get(tool.path)).text();
+    expect(html).toContain(`>${tool.h1}</h1>`);
+    expect(html).toContain('How it works');
+    const ld = JSON.parse(/<script type="application\/ld\+json">(.*?)<\/script>/.exec(html)![1]!);
+    const types = ld['@graph'].map((g: { '@type': string }) => g['@type']);
+    expect(types).toEqual(['SoftwareApplication', 'FAQPage']);
+    // Each FAQ answer is on the page itself
+    for (const q of ld['@graph'][1].mainEntity) expect(html).toContain(q.name.replace(/"/g, '&quot;').replace(/'/g, '&#x27;'));
+  });
 }
+
+test('formatter keeps numbers exactly and warns about duplicate keys', async ({ page }) => {
+  await page.goto('/json-formatter/');
+  await page.getByLabel('JSON input', { exact: true }).fill('{"id":12345678901234567890,"price":1.10,"id":2}');
+  await expect.poll(() => editorText(page, 'Formatted JSON')).toBe('{\n  "id": 2,\n  "price": 1.10\n}\n');
+  await expect(page.getByLabel('JSON status')).toContainText('Duplicate key "id" at line 1, column 41');
+  await page.getByLabel('JSON input', { exact: true }).fill('[12345678901234567890, 1.0, 1e5]');
+  await page.getByRole('radio', { name: 'Minify' }).click();
+  await expect.poll(() => editorText(page, 'Formatted JSON')).toBe('[12345678901234567890,1.0,1e5]');
+});
 
 test('formatter beautifies, minifies and sorts keys', async ({ page }) => {
   await page.goto('/json-formatter/');
@@ -43,14 +64,16 @@ test('formatter beautifies, minifies and sorts keys', async ({ page }) => {
 
 test('validator explains errors and jumps to them', async ({ page }) => {
   await page.goto('/json-validator/');
-  await page.getByRole('button', { name: 'Load example' }).click();
+  await page.getByRole('button', { name: 'Example with an error' }).click();
   const status = page.getByLabel('JSON status');
   await expect(status).toContainText('Trailing comma before "]" at line 27, column 23');
   await expect(page.locator('.cm-error-line')).toHaveCount(1);
   await page.getByRole('button', { name: 'Go to error' }).click();
   await page.getByRole('button', { name: 'Load example' }).click();
   await expect(status).toContainText('Valid JSON');
-  await expect(status).toContainText('6 objects, 4 arrays, 27 keys, depth 4');
+  await expect(status).toContainText('6 objects, 4 arrays, 27 keys, depth 3');
+  await page.getByLabel('JSON input', { exact: true }).fill('{"a":tru}');
+  await expect(status).toContainText('Invalid value "tru" (did you mean true?) at line 1, column 6');
 });
 
 test('JSON to CSV flattens objects and switches delimiter', async ({ page }) => {
@@ -64,6 +87,19 @@ test('JSON to CSV flattens objects and switches delimiter', async ({ page }) => 
   await expect.poll(async () => (await editorText(page, 'CSV output')).split('\n')[1]).toBe(
     '1;Ada Lovelace;ada@example.com;true;London;UK;"[""admin"",""editor""]";2026-10-14T09:12:00Z;',
   );
+});
+
+test('JSON to CSV downloads with a BOM, escapes formulas and unwraps API responses', async ({ page }) => {
+  await page.goto('/json-to-csv/');
+  await page.getByLabel('JSON input', { exact: true }).fill('{"total":2,"data":[{"name":"=1+1","city":"Zürich"},{"name":"Bo"}]}');
+  await expect(page.getByLabel('JSON status')).toContainText('2 rows, 2 columns, from the "data" array');
+  await expect.poll(() => editorText(page, 'CSV output')).toBe('name,city\n=1+1,Zürich\nBo,\n');
+  await page.getByLabel('Escape formulas').click();
+  await expect.poll(() => editorText(page, 'CSV output')).toBe("name,city\n'=1+1,Zürich\nBo,\n");
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download data.csv' }).click()]);
+  const bytes = await import('node:fs').then((fs) => download.path().then((p) => fs.readFileSync(p)));
+  expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+  expect(bytes.subarray(3).toString('utf8')).toBe("name,city\n'=1+1,Zürich\nBo,\n");
 });
 
 test('JSON to YAML writes valid, readable YAML', async ({ page }) => {
@@ -85,8 +121,30 @@ test('viewer expands, searches and copies paths', async ({ page, context }) => {
   await expect(page.getByText('1 match', { exact: true })).toBeVisible();
   const hit = tree.locator('.tree-row.is-hit');
   await expect(hit).toContainText('"Manchester"');
+  // Searching filters the tree to matches and the path to them
+  await expect(tree.getByRole('treeitem')).toHaveCount(4); // $, [2], address, city
   await hit.locator('.tree-label').click();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('$[2].address.city');
+});
+
+test('viewer does not offer to expand empty objects and arrays', async ({ page }) => {
+  await page.goto('/json-viewer/');
+  await page.getByLabel('JSON input', { exact: true }).fill('{"a":{},"b":[],"c":[1]}');
+  const tree = page.getByRole('tree', { name: 'JSON tree' });
+  await expect(tree.getByRole('treeitem')).toHaveCount(4);
+  await expect(tree.getByRole('button', { name: 'Expand' })).toHaveCount(1);
+});
+
+test('header links to every tool, on desktop and on mobile', async ({ page }) => {
+  await page.goto('/json-to-yaml/');
+  await page.getByRole('button', { name: 'Tools' }).click();
+  await expect(page.getByRole('menuitem')).toHaveCount(7);
+  await page.getByRole('menuitem', { name: /JSON viewer/ }).click();
+  await expect(page).toHaveURL(/\/json-viewer\/$/);
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.getByRole('button', { name: 'Menu' }).click();
+  await expect(page.getByRole('menuitem', { name: /JSON formatter/ })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'How it works' })).toBeVisible();
 });
 
 test('tool pages make no network requests while working', async ({ page }) => {

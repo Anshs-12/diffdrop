@@ -39,7 +39,7 @@ export const PAGES: Page[] = [
     path: '/',
     title: 'diffdrop - free diff checker, runs in your browser',
     description:
-      'Compare text, code and JSON side by side. Free, open source, unlimited, no account. Your text never leaves your browser.',
+      'Compare text, code and JSON side by side, free and open source. Unlimited, no account, and your text never leaves your browser. It even works offline.',
     name: 'Diff checker',
     blurb: 'Compare two texts or files, line by line and word by word.',
     priority: 1.0,
@@ -49,7 +49,7 @@ export const PAGES: Page[] = [
     path: '/json-diff/',
     title: 'JSON diff - compare two JSON files online, free | diffdrop',
     description:
-      'Compare two JSON files online and see every changed key and value. Format and sort keys in one click, spot syntax errors, and keep your data private: it never leaves your browser.',
+      'Compare two JSON files online and see every changed key and value. Format and sort keys in one click. Free, no account; your data stays in your browser.',
     name: 'JSON diff',
     blurb: 'Compare two JSON files, ignoring key order and formatting.',
     priority: 0.8,
@@ -57,9 +57,9 @@ export const PAGES: Page[] = [
   {
     id: 'json-formatter',
     path: '/json-formatter/',
-    title: 'JSON formatter - beautify and minify JSON online, free | diffdrop',
+    title: 'JSON formatter - beautify and minify JSON, free | diffdrop',
     description:
-      'Format, beautify or minify JSON online. Choose the indentation, sort keys, and see syntax errors with line and column. Free, no account, your JSON never leaves your browser.',
+      'Format, beautify or minify JSON online. Pick the indentation, sort keys, and see errors by line and column. Free, and your JSON never leaves your browser.',
     name: 'JSON formatter',
     blurb: 'Beautify or minify JSON, with sorted keys if you like.',
     priority: 0.8,
@@ -69,7 +69,7 @@ export const PAGES: Page[] = [
     path: '/json-validator/',
     title: 'JSON validator - check JSON syntax online, free | diffdrop',
     description:
-      'Validate JSON online and find errors fast: the exact line and column, a plain explanation, and the offending line highlighted. Free, no account, your JSON never leaves your browser.',
+      'Validate JSON online and find errors fast: the exact line and column, a plain explanation, duplicate-key warnings. Free, and nothing leaves your browser.',
     name: 'JSON validator',
     blurb: 'Check JSON syntax and see exactly where it breaks.',
     priority: 0.8,
@@ -79,7 +79,7 @@ export const PAGES: Page[] = [
     path: '/json-to-csv/',
     title: 'JSON to CSV converter - free, online | diffdrop',
     description:
-      'Convert JSON to CSV online. Nested objects become dot-separated columns, arrays are kept, and you can pick the delimiter and download the file. Free, no account, runs in your browser.',
+      'Convert JSON to CSV online. Nested objects become columns, arrays are kept, and the file opens cleanly in Excel. Free, and it all runs in your browser.',
     name: 'JSON to CSV',
     blurb: 'Turn a JSON array into a spreadsheet-ready CSV file.',
     priority: 0.8,
@@ -99,7 +99,7 @@ export const PAGES: Page[] = [
     path: '/json-viewer/',
     title: 'JSON viewer - explore JSON as a tree online, free | diffdrop',
     description:
-      'View JSON as a collapsible tree. Expand and collapse nodes, search keys and values, and copy the path to any value. Free, no account, your JSON never leaves your browser.',
+      'View JSON as a collapsible tree. Expand nodes, search keys and values, and copy the path to any value. Free, no account; your JSON stays in your browser.',
     name: 'JSON viewer',
     blurb: 'Explore JSON as a collapsible tree and copy paths.',
     priority: 0.8,

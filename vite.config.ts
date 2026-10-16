@@ -1,9 +1,12 @@
+import fs from 'node:fs';
 import path from 'node:path';
-import { defineConfig, type HtmlTagDescriptor, type Plugin } from 'vite';
+import { pathToFileURL } from 'node:url';
+import { build, defineConfig, type HtmlTagDescriptor, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { CSP } from './src/csp';
-import { GOOGLE_SITE_VERIFICATION, PAGES, SITE_URL, type Page } from './src/site';
+import { GOOGLE_SITE_VERIFICATION, PAGES, SITE_URL, type Page, type PageId } from './src/site';
+import { TOOL_CONTENT } from './src/tools/content';
 
 const FAVICON =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0a0a'/%3E%3Crect x='8' y='9' width='10' height='3' rx='1.5' fill='%23e8908e'/%3E%3Crect x='8' y='14.5' width='16' height='3' rx='1.5' fill='%23fafafa' opacity='.55'/%3E%3Crect x='14' y='20' width='10' height='3' rx='1.5' fill='%239ccb84'/%3E%3C/svg%3E";
@@ -26,6 +29,38 @@ function contentSecurityPolicy(): Plugin {
       ];
     },
   };
+}
+
+const isToolPage = (id: PageId): id is keyof typeof TOOL_CONTENT => id in TOOL_CONTENT;
+
+/** schema.org data for search engines: the app, plus the FAQ on tool pages. */
+function structuredData(page: Page): HtmlTagDescriptor {
+  const url = `${SITE_URL}${page.path}`;
+  const graph: object[] = [
+    {
+      '@type': 'SoftwareApplication',
+      name: page.id === 'home' ? 'diffdrop' : `${page.name} by diffdrop`,
+      url,
+      description: page.description,
+      applicationCategory: 'DeveloperApplication',
+      operatingSystem: 'Any (runs in the browser)',
+      isAccessibleForFree: true,
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    },
+  ];
+  if (isToolPage(page.id)) {
+    graph.push({
+      '@type': 'FAQPage',
+      mainEntity: TOOL_CONTENT[page.id].faq.map(({ q, a }) => ({
+        '@type': 'Question',
+        name: q,
+        acceptedAnswer: { '@type': 'Answer', text: a },
+      })),
+    });
+  }
+  // Not executed, so the CSP doesn't apply; "<" escaped so text can't close the tag
+  const json = JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replace(/</g, '\\u003c');
+  return { tag: 'script', attrs: { type: 'application/ld+json' }, children: json, injectTo: 'head' };
 }
 
 /** Everything in a page's <head> after charset and viewport, from its PAGES entry. */
@@ -57,6 +92,7 @@ function headTags(page: Page): HtmlTagDescriptor[] {
     { tag: 'link', attrs: { rel: 'icon', href: FAVICON }, injectTo: 'head' },
     // Applies the saved theme before first paint (plain script from public/)
     { tag: 'script', attrs: { src: '/theme-init.js' }, injectTo: 'head' },
+    structuredData(page),
   ];
 }
 
@@ -65,7 +101,6 @@ function headTags(page: Page): HtmlTagDescriptor[] {
  * and writes robots.txt and sitemap.xml into the build.
  */
 function pages(): Plugin {
-  const today = new Date().toISOString().slice(0, 10);
   return {
     name: 'pages',
     transformIndexHtml(_html, ctx) {
@@ -82,7 +117,7 @@ function pages(): Plugin {
       });
       const urls = PAGES.map(
         (p) =>
-          `  <url>\n    <loc>${SITE_URL}${p.path}</loc>\n    <lastmod>${today}</lastmod>\n    <priority>${p.priority.toFixed(1)}</priority>\n  </url>`,
+          `  <url>\n    <loc>${SITE_URL}${p.path}</loc>\n    <priority>${p.priority.toFixed(1)}</priority>\n  </url>`,
       ).join('\n');
       this.emitFile({
         type: 'asset',
@@ -93,8 +128,46 @@ function pages(): Plugin {
   };
 }
 
+/**
+ * After the client build, server-renders each tool page (src/tools/prerender.tsx)
+ * into its HTML, so crawlers get the heading, how-to and FAQ without running JS.
+ * The browser then renders the page fresh over it.
+ */
+function prerender(): Plugin {
+  let outDir = '';
+  let ssr = false;
+  return {
+    name: 'prerender',
+    apply: 'build',
+    configResolved(config) {
+      outDir = config.build.outDir;
+      ssr = !!config.build.ssr;
+    },
+    async closeBundle() {
+      if (ssr) return; // the nested build below
+      const ssrDir = path.resolve(__dirname, 'node_modules/.prerender');
+      await build({
+        configFile: path.resolve(__dirname, 'vite.config.ts'),
+        logLevel: 'warn',
+        build: { ssr: path.resolve(__dirname, 'src/tools/prerender.tsx'), outDir: ssrDir, emptyOutDir: true },
+      });
+      const { render } = (await import(pathToFileURL(path.join(ssrDir, 'prerender.js')).href)) as {
+        render: (page: PageId) => string;
+      };
+      for (const page of PAGES.filter((p) => isToolPage(p.id))) {
+        const file = path.resolve(outDir, htmlFile(page));
+        const html = fs.readFileSync(file, 'utf8');
+        const empty = `<div id="root" data-page="${page.id}"></div>`;
+        if (!html.includes(empty)) throw new Error(`prerender: no empty #root in ${file}`);
+        fs.writeFileSync(file, html.replace(empty, `<div id="root" data-page="${page.id}">${render(page.id)}</div>`));
+      }
+      fs.rmSync(ssrDir, { recursive: true, force: true });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss(), contentSecurityPolicy(), pages()],
+  plugins: [react(), tailwindcss(), contentSecurityPolicy(), pages(), prerender()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
