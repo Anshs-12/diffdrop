@@ -1,10 +1,12 @@
 /** Conversions and summaries behind the JSON tool pages. */
 
+import { isContainer, isJsonNumber } from './jsonValue';
+
 export type Indent = 2 | 4 | 'tab' | 'minify';
 
 function sortKeysDeep(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(sortKeysDeep);
-  if (value && typeof value === 'object') {
+  if (isContainer(value)) {
     const out: Record<string, unknown> = {};
     for (const key of Object.keys(value).sort()) out[key] = sortKeysDeep((value as Record<string, unknown>)[key]);
     return out;
@@ -31,17 +33,18 @@ export interface JsonStats {
   depth: number;
 }
 
+/** Counts, and depth = how many objects/arrays are nested inside each other ({"a":[1]} is 2, a plain value 0). */
 export function jsonStats(value: unknown): JsonStats {
   const s: JsonStats = { objects: 0, arrays: 0, keys: 0, values: 0, depth: 0 };
-  // Iterative walk so very deep documents can't overflow the stack
-  const stack: [unknown, number][] = [[value, 1]];
+  // Iterative walk so very deep documents can't overflow the stack; d = containers around v
+  const stack: [unknown, number][] = [[value, 0]];
   while (stack.length) {
     const [v, d] = stack.pop()!;
-    s.depth = Math.max(s.depth, d);
+    if (isContainer(v)) s.depth = Math.max(s.depth, d + 1);
     if (Array.isArray(v)) {
       s.arrays++;
       for (const item of v) stack.push([item, d + 1]);
-    } else if (v && typeof v === 'object') {
+    } else if (isContainer(v)) {
       s.objects++;
       for (const [, child] of Object.entries(v)) {
         s.keys++;
@@ -64,23 +67,32 @@ export interface CsvResult {
   csv: string;
   rows: number;
   columns: string[];
+  /** Key of the array that became the rows, when the input was an object wrapping one. */
+  unwrapped: string | null;
 }
 
-/** Flatten nested objects into "a.b.c" keys; arrays stay whole (as JSON text in one cell). */
-function flatten(value: unknown, prefix: string, out: Map<string, unknown>) {
-  if (value && typeof value === 'object' && !Array.isArray(value)) {
+export interface CsvOptions {
+  delimiter?: Delimiter;
+  /** Prefix cells starting with = + - @ tab or CR with ', so spreadsheets don't run them as formulas. */
+  escapeFormulas?: boolean;
+}
+
+/** Flatten nested objects into key paths; arrays stay whole (as JSON text in one cell). */
+function flatten(value: unknown, path: string[], out: [string[], unknown][]) {
+  if (isContainer(value) && !Array.isArray(value)) {
     const entries = Object.entries(value);
-    if (entries.length === 0 && prefix) out.set(prefix, '{}');
-    for (const [k, v] of entries) flatten(v, prefix ? `${prefix}.${k}` : k, out);
+    if (entries.length === 0 && path.length) out.push([path, '{}']);
+    for (const [k, v] of entries) flatten(v, [...path, k], out);
   } else {
-    out.set(prefix || 'value', value);
+    out.push([path, value]);
   }
 }
 
-function cell(value: unknown, delimiter: Delimiter): string {
+function cell(value: unknown, delimiter: Delimiter, escapeFormulas: boolean): string {
   let text: string;
   if (value === null || value === undefined) text = '';
-  else if (typeof value === 'string') text = value;
+  else if (typeof value === 'string') text = escapeFormulas && /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  else if (isJsonNumber(value)) text = value.source;
   else if (typeof value === 'object') text = JSON.stringify(value);
   else text = String(value);
   // RFC 4180: quote cells containing the delimiter, quotes or line breaks; double inner quotes
@@ -89,29 +101,51 @@ function cell(value: unknown, delimiter: Delimiter): string {
     : text;
 }
 
+/** The one array of objects inside an object like {"data": [...], "total": 3}, if there is exactly one. */
+function wrappedArray(value: unknown): [string, unknown[]] | null {
+  if (!isContainer(value) || Array.isArray(value)) return null;
+  const arrays = Object.entries(value).filter(([, v]) => Array.isArray(v));
+  if (arrays.length !== 1) return null;
+  const [key, items] = arrays[0] as [string, unknown[]];
+  return items.length > 0 && items.every((x) => isContainer(x) && !Array.isArray(x)) ? [key, items] : null;
+}
+
 /**
  * Convert JSON to CSV. An array of objects becomes one row per object, with the
- * union of all (flattened) keys as columns in first-seen order. A single object
- * becomes one row; an array of plain values becomes one "value" column.
+ * union of all (flattened) keys as columns in first-seen order. An object that
+ * wraps a single array of objects uses that array; any other object becomes one
+ * row; an array of plain values becomes one "value" column. When two different
+ * paths flatten to the same name ({"a.b": 1} and {"a": {"b": 2}}), the later
+ * one gets a suffix: "a.b (2)".
  */
-export function jsonToCsv(value: unknown, delimiter: Delimiter = ','): CsvResult {
-  const items = Array.isArray(value) ? value : [value];
+export function jsonToCsv(value: unknown, { delimiter = ',', escapeFormulas = false }: CsvOptions = {}): CsvResult {
+  const wrapped = wrappedArray(value);
+  const items = wrapped ? wrapped[1] : Array.isArray(value) ? value : [value];
   const columns: string[] = [];
-  const seen = new Set<string>();
+  const columnOf = new Map<string, string>(); // path (as JSON) → column name
+  const names = new Set<string>();
   const rows = items.map((item) => {
-    const flat = new Map<string, unknown>();
-    flatten(item, '', flat);
-    for (const key of flat.keys()) {
-      if (!seen.has(key)) {
-        seen.add(key);
-        columns.push(key);
+    const flat: [string[], unknown][] = [];
+    flatten(item, [], flat);
+    const row = new Map<string, unknown>();
+    for (const [path, v] of flat) {
+      const id = JSON.stringify(path);
+      let name = columnOf.get(id);
+      if (name === undefined) {
+        const base = path.length ? path.join('.') : 'value';
+        name = base;
+        for (let k = 2; names.has(name); k++) name = `${base} (${k})`;
+        names.add(name);
+        columnOf.set(id, name);
+        columns.push(name);
       }
+      row.set(name, v);
     }
-    return flat;
+    return row;
   });
-  const lines = [columns.map((c) => cell(c, delimiter)).join(delimiter)];
-  for (const row of rows) lines.push(columns.map((c) => cell(row.get(c), delimiter)).join(delimiter));
-  return { csv: lines.join('\n') + '\n', rows: rows.length, columns };
+  const line = (cells: unknown[]) => cells.map((c) => cell(c, delimiter, escapeFormulas)).join(delimiter);
+  const lines = [line(columns), ...rows.map((row) => line(columns.map((c) => row.get(c))))];
+  return { csv: lines.join('\n') + '\n', rows: rows.length, columns, unwrapped: wrapped ? wrapped[0] : null };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -136,15 +170,24 @@ function isPlainSafe(s: string): boolean {
   return true;
 }
 
+/**
+ * Characters YAML won't take raw inside double quotes: C1 controls and DEL (not
+ * printable), NEL/LS/PS (line breaks to YAML), and U+FFFE/FFFF. JSON.stringify
+ * leaves them as they are, so they're escaped here.
+ */
+const YAML_UNSAFE = /[\u007f-\u009f\u2028\u2029\ufffe\uffff]/g;
+
 function scalar(value: unknown): string {
   if (value === null) return 'null';
   if (typeof value === 'boolean' || typeof value === 'number') return String(value);
+  if (isJsonNumber(value)) return value.source;
   const s = String(value);
-  // A JSON string literal is a valid YAML double-quoted scalar
-  return isPlainSafe(s) ? s : JSON.stringify(s);
+  if (isPlainSafe(s)) return s;
+  // A JSON string literal is a valid YAML double-quoted scalar, once the characters above are escaped
+  return JSON.stringify(s).replace(YAML_UNSAFE, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`);
 }
 
-const isCollection = (v: unknown): v is object => v !== null && typeof v === 'object';
+const isCollection = isContainer;
 const isEmpty = (v: object) => (Array.isArray(v) ? v.length === 0 : Object.keys(v).length === 0);
 
 function yamlLines(value: unknown, indent: string, out: string[]) {

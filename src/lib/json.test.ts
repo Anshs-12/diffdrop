@@ -66,7 +66,14 @@ describe('checkJson', () => {
   it('describes common mistakes', () => {
     expect(checkJson('{"a": 1,}')).toMatchObject({ status: 'invalid', message: 'Trailing comma before "}"', column: 9 });
     expect(checkJson('[1, 2,\n]')).toMatchObject({ status: 'invalid', message: 'Trailing comma before "]"', line: 2, column: 1 });
-    expect(checkJson("{'a': 1}")).toMatchObject({ status: 'invalid', message: 'Expected a "quoted" key', line: 1, column: 2 });
+    expect(checkJson("{'a': 1}")).toMatchObject({ status: 'invalid', message: 'Keys need "double quotes", not single quotes', line: 1, column: 2 });
+    expect(checkJson('{"a":tru}')).toMatchObject({ message: 'Invalid value "tru" (did you mean true?)', line: 1, column: 6 });
+    expect(checkJson('[True]')).toMatchObject({ message: '"True" should be lowercase: true', column: 2 });
+    expect(checkJson('{"a": undefined}')).toMatchObject({ message: "undefined isn't allowed in JSON", column: 7 });
+    expect(checkJson('\uFEFF{}')).toMatchObject({ message: expect.stringContaining('byte order mark'), line: 1, column: 1 });
+    expect(checkJson('[1,\u00A02]')).toMatchObject({ message: 'Unexpected invisible character U+00A0 (no-break space)', column: 4 });
+    expect(checkJson('{"a": 1 // note\n}')).toMatchObject({ message: "Comments aren't allowed in JSON" });
+    expect(checkJson("['a']")).toMatchObject({ message: 'JSON needs "double quotes", not single quotes', column: 2 });
     expect(checkJson('{"a": 1')).toMatchObject({ status: 'invalid', message: 'Unexpected end of input' });
   });
 });

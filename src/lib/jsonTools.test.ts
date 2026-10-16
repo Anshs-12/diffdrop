@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parse as parseYaml } from 'yaml';
 import { jsonStats, jsonToCsv, jsonToYaml, pathString, stringifyJson } from './jsonTools';
 import { rng } from '@/test/random';
+import { JsonNumber, LOSSLESS, parseJson, scanJson } from './jsonValue';
 
 /** Random JSON values with deliberately awkward strings and keys. */
 function randomJson(rand: () => number, depth = 0): unknown {
@@ -9,7 +10,7 @@ function randomJson(rand: () => number, depth = 0): unknown {
     '', ' ', 'plain', 'two words', 'yes', 'No', 'on', 'OFF', 'null', 'Null', '~', 'true', '1', '0x1F', '1.5.0', '.inf',
     '-', '- item', 'a: b', 'a #b', '#comment', 'http://x.io/a?b=c', 'quote "inside"', "it's", 'line\nbreak', 'tab\there',
     'trailing ', ' leading', '[x]', '{y}', '*alias', '&anchor', '!tag', '%x', '@x', '`x`', '|', '>', 'ünïcödé', '日本', '😀',
-    '2001-12-14', '12:30', 'e1', 'Infinity', 'NaN', '?', ':', 'key:', '\\back', 'semi;colon', 'comma,here',
+    '2001-12-14', '12:30', 'e1', 'Infinity', 'NaN', '?', ':', 'key:', '\\back', 'semi;colon', 'comma,here', 'nel\u0085', 'ls\u2028', 'ps\u2029', 'c1\u0090', '=SUM(A1)', '\ufeffbom',
   ];
   const pick = <T,>(xs: T[]) => xs[Math.floor(rand() * xs.length)]!;
   const r = rand();
@@ -73,13 +74,16 @@ describe('stringifyJson', () => {
 
 describe('jsonStats', () => {
   it('counts objects, arrays, keys, values and depth', () => {
-    expect(jsonStats({ a: [1, 2, { b: null }], c: 'x' })).toEqual({ objects: 2, arrays: 1, keys: 3, values: 4, depth: 4 });
-    expect(jsonStats(5)).toEqual({ objects: 0, arrays: 0, keys: 0, values: 1, depth: 1 });
+    expect(jsonStats({ a: [1, 2, { b: null }], c: 'x' })).toEqual({ objects: 2, arrays: 1, keys: 3, values: 4, depth: 3 });
+    expect(jsonStats({ a: 1 })).toMatchObject({ depth: 1 });
+    expect(jsonStats([])).toMatchObject({ depth: 1 });
+    expect(jsonStats(5)).toEqual({ objects: 0, arrays: 0, keys: 0, values: 1, depth: 0 });
+    expect(jsonStats({ n: new JsonNumber('1.0') })).toEqual({ objects: 1, arrays: 0, keys: 1, values: 1, depth: 1 });
   });
   it('handles very deep documents without overflowing', () => {
     let v: unknown = 1;
     for (let i = 0; i < 100_000; i++) v = [v];
-    expect(jsonStats(v).depth).toBe(100_001);
+    expect(jsonStats(v).depth).toBe(100_000);
   });
 });
 
@@ -108,7 +112,7 @@ describe('jsonToCsv', () => {
           for (let i = 0; i < 3; i++) o[`k${Math.floor(rand() * 4)}`] = randomJson(rand, 4);
           return o;
         });
-        const { csv, columns } = jsonToCsv(items, delimiter);
+        const { csv, columns } = jsonToCsv(items, { delimiter });
         const rows = readCsv(csv, delimiter);
         expect(rows[0]).toEqual(columns);
         expect(rows).toHaveLength(items.length + 1);
@@ -125,6 +129,71 @@ describe('jsonToCsv', () => {
   });
 });
 
+describe('jsonToCsv edge cases', () => {
+  it('keeps both columns when a dotted key collides with a nested path', () => {
+    const r = jsonToCsv([{ 'a.b': 1, a: { b: 2 } }, { a: { b: 3 } }]);
+    expect(r.columns).toEqual(['a.b', 'a.b (2)']);
+    expect(r.csv).toBe('a.b,a.b (2)\n1,2\n,3\n');
+  });
+
+  it('unwraps an object holding a single array of objects', () => {
+    const r = jsonToCsv({ total: 2, data: [{ id: 1 }, { id: 2 }] });
+    expect(r.unwrapped).toBe('data');
+    expect(r.csv).toBe('id\n1\n2\n');
+    // A record with a list of plain values stays one row
+    expect(jsonToCsv({ name: 'x', tags: ['a', 'b'] })).toMatchObject({ unwrapped: null, rows: 1 });
+    // Two arrays: ambiguous, so no unwrapping
+    expect(jsonToCsv({ a: [{ x: 1 }], b: [{ y: 1 }] }).unwrapped).toBeNull();
+  });
+
+  it('escapes formula-like cells only when asked', () => {
+    const items = [{ f: '=SUM(A1)', p: '+1', m: '-x', at: '@a', t: '\tx', ok: 'a=b', n: -5 }];
+    expect(jsonToCsv(items).csv.split('\n')[1]).toBe('=SUM(A1),+1,-x,@a,"\tx",a=b,-5');
+    expect(jsonToCsv(items, { escapeFormulas: true }).csv.split('\n')[1]).toBe("'=SUM(A1),'+1,'-x,'@a,'\tx,a=b,-5");
+  });
+
+  it('writes exact numbers as written', () => {
+    expect(jsonToCsv([{ id: new JsonNumber('12345678901234567890'), v: new JsonNumber('1.0') }]).csv).toBe(
+      'id,v\n12345678901234567890,1.0\n',
+    );
+  });
+});
+
+describe('lossless numbers', () => {
+  it('this runtime supports source access', () => expect(LOSSLESS).toBe(true));
+
+  it('keeps big integers, trailing zeros and exponents through formatting, YAML and CSV', () => {
+    const text = '{"id":12345678901234567890,"price":1.10,"big":1e400,"e":1E5,"z":-0,"plain":42,"f":0.5}';
+    const v = parseJson(text);
+    expect(stringifyJson(v, 'minify', false)).toBe(text);
+    expect(stringifyJson(v, 2, true)).toContain('"id": 12345678901234567890');
+    expect(jsonToYaml(v)).toContain('id: 12345678901234567890\nprice: 1.10\n');
+    expect((v as Record<string, unknown>).plain).toBe(42);
+  });
+});
+
+describe('scanJson', () => {
+  it('finds duplicate keys with their position, per object', () => {
+    const r = scanJson('{"a":1,"b":{"a":2},\n "a":3, "\\u0062":4}');
+    expect(r.duplicateCount).toBe(2);
+    expect(r.duplicates).toEqual([
+      { key: 'a', line: 2, column: 2 },
+      { key: 'b', line: 2, column: 9 },
+    ]);
+  });
+
+  it('spots number-like keys that the browser moves to the front', () => {
+    expect(scanJson('{"b":1,"2":1}').reorderedKeys).toBe(true);
+    expect(scanJson('{"2":1,"1":1}').reorderedKeys).toBe(true);
+    expect(scanJson('{"1":1,"2":1,"b":1}').reorderedKeys).toBe(false);
+    expect(scanJson('{"b":"2","c":[{"x":1}]}').reorderedKeys).toBe(false);
+  });
+
+  it('ignores brackets, quotes and colons inside strings', () => {
+    expect(scanJson('{"a":"{\\"a\\":1}","b":"x\\\\","a ":1}')).toMatchObject({ duplicateCount: 0, reorderedKeys: false });
+  });
+});
+
 describe('jsonToYaml', () => {
   it('writes readable block YAML', () => {
     expect(jsonToYaml({ name: 'diffdrop', version: '1.5.0', tags: ['a', 'b'], nested: { ok: true, n: null }, empty: [] })).toBe(
@@ -138,6 +207,12 @@ describe('jsonToYaml', () => {
     for (const s of ['yes', 'No', 'on', 'null', '~', 'true', '123', '1.5', '', 'a: b', '#x', '- x', '2001-12-14', ' x']) {
       expect(jsonToYaml({ k: s })).toBe(`k: ${JSON.stringify(s)}\n`);
     }
+  });
+
+  it('escapes characters YAML treats as line breaks or non-printable', () => {
+    const s = 'a\u0085b\u2028c\u2029d\u007fe\u0090f\ufffeg';
+    expect(jsonToYaml({ k: s })).toBe('k: "a\\u0085b\\u2028c\\u2029d\\u007fe\\u0090f\\ufffeg"\n');
+    expect(parseYaml(jsonToYaml({ k: s }))).toEqual({ k: s });
   });
 
   it('handles arrays of objects, nested arrays and top-level scalars', () => {

@@ -1,5 +1,7 @@
 /** JSON helpers for the JSON diff page. */
 
+import { lineColumn } from './jsonValue';
+
 export type JsonCheck =
   | { status: 'empty' }
   | { status: 'valid' }
@@ -16,15 +18,36 @@ function sortKeys(value: unknown): unknown {
   return value;
 }
 
-/** Line and column (1-based) of a character offset. */
-function lineColumn(text: string, offset: number): { line: number; column: number } {
-  let line = 1;
-  let last = -1;
-  for (let i = text.indexOf('\n'); i !== -1 && i < offset; i = text.indexOf('\n', i + 1)) {
-    line++;
-    last = i;
+const INVISIBLE: Record<number, string> = {
+  0x00a0: 'no-break space',
+  0x200b: 'zero-width space',
+  0x200c: 'zero-width non-joiner',
+  0x200d: 'zero-width joiner',
+  0x2028: 'line separator',
+  0x2029: 'paragraph separator',
+  0x2060: 'word joiner',
+  0xfeff: 'byte order mark',
+};
+
+/** A character as it should appear in an error message: visible, with its code if it isn't. */
+function describeChar(c: string): string {
+  const code = c.codePointAt(0)!;
+  const hex = `U+${code.toString(16).toUpperCase().padStart(4, '0')}`;
+  if (INVISIBLE[code]) return `invisible character ${hex} (${INVISIBLE[code]})`;
+  if (code < 0x20 || (code >= 0x7f && code <= 0x9f) || /\s/.test(c)) return `invisible character ${hex}`;
+  return JSON.stringify(c);
+}
+
+/** Messages for words that aren't JSON values. */
+function wordMessage(word: string): string {
+  const lower = word.toLowerCase();
+  if (word !== lower && (lower === 'true' || lower === 'false' || lower === 'null')) return `"${word}" should be lowercase: ${lower}`;
+  if (word === 'None' || word === 'nil') return `"${word}" isn't JSON; use null`;
+  if (word === 'undefined' || word === 'NaN' || word === 'Infinity') return `${word} isn't allowed in JSON`;
+  for (const literal of ['true', 'false', 'null']) {
+    if (literal.startsWith(word) || word.startsWith(literal)) return `Invalid value "${word}" (did you mean ${literal}?)`;
   }
-  return { line, column: offset - last };
+  return `Unexpected word "${word}" (strings need "double quotes")`;
 }
 
 /**
@@ -43,11 +66,18 @@ function findJsonError(text: string): { offset: number; message: string } | null
   }
   const fail = (message?: string): never => {
     if (i >= n) throw new Fail(n, 'Unexpected end of input');
-    throw new Fail(i, message ?? `Unexpected ${JSON.stringify(text[i])}`);
+    if (text[i] === '/' && (text[i + 1] === '/' || text[i + 1] === '*')) throw new Fail(i, "Comments aren't allowed in JSON");
+    if (message) throw new Fail(i, message);
+    const c = String.fromCodePoint(text.codePointAt(i)!);
+    if (c === '\uFEFF' && i === 0) throw new Fail(i, 'The text starts with an invisible byte order mark (BOM, U+FEFF); remove it');
+    if (c === "'") throw new Fail(i, 'JSON needs "double quotes", not single quotes');
+    throw new Fail(i, `Unexpected ${describeChar(c)}`);
   };
-  const literal = (word: string) => {
-    for (let k = 0; k < word.length; k++) if (text[i + k] !== word[k]) { i += k; fail(); }
-    i += word.length;
+  /** A bare word: true, false or null, or an error at its first letter. */
+  const word = () => {
+    const w = /^[A-Za-z_$][\w$]*/.exec(text.slice(i, i + 64))![0];
+    if (w === 'true' || w === 'false' || w === 'null') i += w.length;
+    else fail(wordMessage(w));
   };
   const string = () => {
     i++; // opening quote
@@ -80,7 +110,7 @@ function findJsonError(text: string): { offset: number; message: string } | null
       if (text[i] === '}') { i++; return; }
       for (;;) {
         ws();
-        if (text[i] !== '"') fail('Expected a "quoted" key');
+        if (text[i] !== '"') fail(text[i] === "'" ? 'Keys need "double quotes", not single quotes' : 'Expected a "quoted" key');
         string();
         ws();
         if (text[i] !== ':') fail('Expected ":"');
@@ -113,9 +143,7 @@ function findJsonError(text: string): { offset: number; message: string } | null
         fail('Expected "," or "]"');
       }
     } else if (c === '"') string();
-    else if (c === 't') literal('true');
-    else if (c === 'f') literal('false');
-    else if (c === 'n') literal('null');
+    else if (c !== undefined && /[A-Za-z_$]/.test(c)) word();
     else if (c === '-' || (c !== undefined && c >= '0' && c <= '9')) number();
     else fail();
   };
