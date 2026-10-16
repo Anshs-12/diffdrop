@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { fillEditors } from './helpers';
+import { editorText, fillEditors, trackErrors } from './helpers';
 
 test.describe('search and sharing', () => {
   test('home page has a descriptive title, canonical URL and preview card', async ({ page }) => {
     await page.goto('/');
-    await expect(page).toHaveTitle('diffdrop - free diff checker, runs in your browser');
+    await expect(page).toHaveTitle('diffdrop - free, open source developer tools');
     const meta = (sel: string) => page.locator(sel).first().getAttribute('content');
-    expect(await meta('meta[name="description"]')).toContain('Compare text, code and JSON side by side');
+    expect(await meta('meta[name="description"]')).toContain('Free, open source developer tools');
     expect(await page.locator('link[rel="canonical"]').getAttribute('href')).toMatch(/^https:\/\/.+\/$/);
     expect(await meta('meta[property="og:image"]')).toMatch(/^https:\/\/.+\/og\.png$/);
     expect(await meta('meta[name="twitter:card"]')).toBe('summary_large_image');
@@ -20,7 +20,7 @@ test.describe('search and sharing', () => {
     const sitemap = await request.get('/sitemap.xml');
     const xml = await sitemap.text();
     expect(xml).toContain('<urlset');
-    for (const path of ['/', '/json-diff/', '/json-formatter/', '/json-validator/', '/json-to-csv/', '/json-to-yaml/', '/json-viewer/']) {
+    for (const path of ['/', '/diff-checker/', '/json-diff/', '/json-formatter/', '/json-validator/', '/json-to-csv/', '/json-to-yaml/', '/json-viewer/']) {
       expect(xml).toContain(`${path}</loc>`);
     }
 
@@ -36,7 +36,7 @@ test.describe('search and sharing', () => {
   });
 
   test('header and footer link to GitHub, issues and the JSON page', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/diff-checker/');
     const footer = page.getByRole('navigation', { name: 'Footer' });
     await expect(footer.getByRole('link', { name: 'report a bug / request a feature' })).toHaveAttribute('href', /github\.com\/.+\/issues$/);
     await expect(footer.getByRole('link', { name: 'GitHub' })).toHaveAttribute('target', '_blank');
@@ -46,13 +46,43 @@ test.describe('search and sharing', () => {
     await expect(page.getByRole('navigation', { name: 'Tools' }).getByRole('link', { name: 'JSON diff' })).toHaveAttribute('href', '/json-diff/');
   });
 
-  test('landing page has a card for every tool', async ({ page }) => {
+  test('home page is a hub with a card for every tool', async ({ page }) => {
+    const errors = trackErrors(page);
     await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Developer tools they paywall.');
+    await expect(page.getByRole('heading', { level: 1 }).getByRole('link', { name: 'Open source.' })).toHaveAttribute('href', /github\.com\/Anshs-12\/diffdrop$/);
     const tools = page.locator('#tools');
-    for (const path of ['/json-diff/', '/json-formatter/', '/json-validator/', '/json-to-csv/', '/json-to-yaml/', '/json-viewer/']) {
+    for (const path of ['/diff-checker/', '/json-diff/', '/json-formatter/', '/json-validator/', '/json-to-csv/', '/json-to-yaml/', '/json-viewer/']) {
       await expect(tools.locator(`a[href="${path}"]`)).toBeVisible();
     }
-    await expect(tools.locator('a[href="/"]')).toHaveCount(0);
+    await tools.getByRole('link', { name: /JSON viewer/ }).click();
+    await expect(page).toHaveURL(/\/json-viewer\/$/);
+    // The logo leads back home
+    await page.getByRole('link', { name: 'diffdrop home' }).click();
+    await expect(page).toHaveURL(/\/$/);
+    expect(errors).toEqual([]);
+  });
+
+  test('home page content is in the static HTML', async ({ request }) => {
+    const html = await (await request.get('/')).text();
+    expect(html).toContain('Developer tools they paywall.');
+    for (const name of ['Diff checker', 'JSON formatter', 'JSON viewer', 'How it stays private']) expect(html).toContain(name);
+  });
+
+  test('links shared before the move still open in the diff checker', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.goto('/diff-checker/');
+    await fillEditors(page, 'old line\n', 'new line\n');
+    await page.getByRole('button', { name: 'Share' }).click();
+    await expect(page).toHaveURL(/#.+/);
+    const hash = new URL(page.url()).hash;
+    const old = await context.newPage();
+    await old.goto(`/${hash}`);
+    await expect(old).toHaveURL(new RegExp(`/diff-checker/${hash.replace(/[.*+?^${}()|[\]\\$]/g, '\\$&')}$`));
+    await expect.poll(() => editorText(old, 'Changed text')).toBe('new line\n');
+    // Plain section links on the home page don't redirect
+    await old.goto('/#why');
+    await expect(old).toHaveURL(/\/#why$/);
   });
 });
 
@@ -63,7 +93,7 @@ test.describe('/json-diff', () => {
     expect(await page.locator('link[rel="canonical"]').getAttribute('href')).toMatch(/\/json-diff\/$/);
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Compare JSON online.');
     await expect(page.getByRole('heading', { name: 'How to compare two JSON files' })).toBeVisible();
-    await expect(page.getByRole('navigation', { name: 'Tools' }).getByRole('link', { name: 'Diff checker' })).toHaveAttribute('href', '/');
+    await expect(page.getByRole('navigation', { name: 'Tools' }).getByRole('link', { name: 'Diff checker' })).toHaveAttribute('href', '/diff-checker/');
   });
 
   test('flags invalid JSON with its line and column', async ({ page }) => {

@@ -129,8 +129,8 @@ function pages(): Plugin {
 }
 
 /**
- * After the client build, server-renders each tool page (src/tools/prerender.tsx)
- * into its HTML, so crawlers get the heading, how-to and FAQ without running JS.
+ * After the client build, server-renders the home page and each tool page
+ * (src/prerender.tsx) into its HTML, so crawlers get the heading, how-to and FAQ without running JS.
  * The browser then renders the page fresh over it.
  */
 function prerender(): Plugin {
@@ -149,12 +149,12 @@ function prerender(): Plugin {
       await build({
         configFile: path.resolve(__dirname, 'vite.config.ts'),
         logLevel: 'warn',
-        build: { ssr: path.resolve(__dirname, 'src/tools/prerender.tsx'), outDir: ssrDir, emptyOutDir: true },
+        build: { ssr: path.resolve(__dirname, 'src/prerender.tsx'), outDir: ssrDir, emptyOutDir: true },
       });
       const { render } = (await import(pathToFileURL(path.join(ssrDir, 'prerender.js')).href)) as {
         render: (page: PageId) => string;
       };
-      for (const page of PAGES.filter((p) => isToolPage(p.id))) {
+      for (const page of PAGES.filter((p) => p.id === 'home' || isToolPage(p.id))) {
         const file = path.resolve(outDir, htmlFile(page));
         const html = fs.readFileSync(file, 'utf8');
         const empty = `<div id="root" data-page="${page.id}"></div>`;

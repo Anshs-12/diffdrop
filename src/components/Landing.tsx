@@ -19,7 +19,7 @@ import {
   WrapText,
 } from 'lucide-react';
 import { CSP_DIRECTIVES } from '@/csp';
-import { PAGES, REPO_URL, TOOL_PAGES, pageById, type PageId } from '@/site';
+import { PAGES, REPO_URL, TOOL_PAGES, type PageId } from '@/site';
 import type { Variant } from '@/variant';
 import { Button } from '@/components/ui/button';
 import { GitHubIcon } from './Icons';
@@ -190,7 +190,7 @@ const FEATURES: { Icon: typeof Check; title: string; body: React.ReactNode }[] =
   },
 ];
 
-const SectionTitle: React.FC<{ eyebrow: string; title: React.ReactNode; children?: React.ReactNode }> = ({
+export const SectionTitle: React.FC<{ eyebrow: string; title: React.ReactNode; children?: React.ReactNode }> = ({
   eyebrow,
   title,
   children,
@@ -347,7 +347,7 @@ export const Privacy: React.FC = () => (
       <div className="max-w-[64ch] space-y-4 text-[16px] text-muted-foreground">
         <p>
           There's <span className="em-safe">no backend</span>. Text you paste and files you open are read into memory in
-          this tab and diffed on your machine. Close the tab and they're gone. The only thing diffdrop remembers is your
+          this tab and processed on your machine. Close the tab and they're gone. The only thing diffdrop remembers is your
           theme.
         </p>
         <p>
@@ -429,12 +429,12 @@ export const JsonGuide: React.FC = () => (
 // ─────────────────────────────────────────────────────────────
 
 export const ToolCards: React.FC<{ current: PageId }> = ({ current }) => {
-  const pages = [pageById('home'), ...TOOL_PAGES].filter((p) => p.id !== current);
+  const pages = TOOL_PAGES.filter((p) => p.id !== current);
   return (
     <section id="tools" className="scroll-mt-20 border-t py-20 sm:py-28">
       <div className="page">
-        <SectionTitle eyebrow="more free tools" title="Everything for JSON, in your browser.">
-          Format, validate, convert and explore JSON. Same deal: free, open source, and nothing leaves this tab.
+        <SectionTitle eyebrow="more free tools" title="More tools, same deal.">
+          Diff, format, validate, convert and explore. Free, open source, and nothing leaves this tab.
         </SectionTitle>
         <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {pages.map((p) => (

@@ -22,7 +22,7 @@ test.describe.configure({ mode: 'serial' });
 for (const { lines, budgetMs } of CASES) {
   test(`shows a ${lines.toLocaleString()}-line diff within ${budgetMs.toLocaleString()} ms`, async ({ page }) => {
     test.setTimeout(90_000);
-    await page.goto('/');
+    await page.goto('/diff-checker/');
     const edits = Math.ceil(lines / 40);
 
     const ms = await page.evaluate(async (n) => {
@@ -80,7 +80,7 @@ for (const { lines, budgetMs } of CASES) {
 
 test('typing in a 100,000-line document stays fast', async ({ page }) => {
   test.setTimeout(60_000);
-  await page.goto('/');
+  await page.goto('/diff-checker/');
   const keystrokeMs = await page.evaluate(async () => {
     const text = Array.from({ length: 100_000 }, (_, i) => `line ${i} value = ${i * 3};`).join('\n');
     const el = document.querySelector<HTMLElement>('[aria-label="Original text"]')!;

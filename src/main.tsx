@@ -6,7 +6,7 @@ import App from './App';
 import { readPage } from './variant';
 import './index.css';
 
-// Entry for the diff pages (/ and /json-diff/); the JSON tools use tools/main.tsx
+// Entry for the diff pages (/diff-checker/ and /json-diff/); the home page uses home/main.tsx, the JSON tools tools/main.tsx
 const root = document.getElementById('root')!;
 
 ReactDOM.createRoot(root).render(

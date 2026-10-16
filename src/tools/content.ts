@@ -41,7 +41,7 @@ export interface ToolContent {
   faq: { q: string; a: string }[];
 }
 
-type ToolId = Exclude<PageId, 'home' | 'json-diff'>;
+type ToolId = Exclude<PageId, 'home' | 'diff-checker' | 'json-diff'>;
 
 export const TOOL_CONTENT: Record<ToolId, ToolContent> = {
   'json-formatter': {

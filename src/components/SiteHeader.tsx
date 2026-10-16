@@ -85,7 +85,11 @@ const SiteHeader: React.FC<SiteHeaderProps> = ({ current, sections = DIFF_SECTIO
   return (
     <header className="site-header">
       <div className="page flex h-16 items-center gap-4">
-        <a href="#top" className="flex items-center gap-2.5" aria-label="diffdrop, back to top">
+        <a
+          href={current === 'home' ? '#top' : '/'}
+          className="flex items-center gap-2.5"
+          aria-label={current === 'home' ? 'diffdrop, back to top' : 'diffdrop home'}
+        >
           <LogoMark size={32} />
           <span className="text-[21px] leading-none font-semibold tracking-tight">diffdrop</span>
         </a>

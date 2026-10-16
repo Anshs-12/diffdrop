@@ -27,7 +27,7 @@ for (const tool of TOOLS) {
     await expect(page.getByRole('heading', { name: 'How it works' })).toBeVisible();
     // Links to every other page
     const tools = page.getByRole('navigation', { name: 'Tools' });
-    await expect(tools.getByRole('link')).toHaveCount(6);
+    await expect(tools.getByRole('link')).toHaveCount(7);
     expect(errors).toEqual([]);
   });
 
@@ -138,7 +138,7 @@ test('viewer does not offer to expand empty objects and arrays', async ({ page }
 test('header links to every tool, on desktop and on mobile', async ({ page }) => {
   await page.goto('/json-to-yaml/');
   await page.getByRole('button', { name: 'Tools' }).click();
-  await expect(page.getByRole('menuitem')).toHaveCount(7);
+  await expect(page.getByRole('menuitem')).toHaveCount(8);
   await page.getByRole('menuitem', { name: /JSON viewer/ }).click();
   await expect(page).toHaveURL(/\/json-viewer\/$/);
   await page.setViewportSize({ width: 390, height: 800 });

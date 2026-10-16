@@ -10,6 +10,7 @@ export const REPO_URL = 'https://github.com/Anshs-12/diffdrop';
 
 export type PageId =
   | 'home'
+  | 'diff-checker'
   | 'json-diff'
   | 'json-formatter'
   | 'json-validator'
@@ -37,12 +38,22 @@ export const PAGES: Page[] = [
   {
     id: 'home',
     path: '/',
-    title: 'diffdrop - free diff checker, runs in your browser',
+    title: 'diffdrop - free, open source developer tools',
     description:
-      'Compare text, code and JSON side by side, free and open source. Unlimited, no account, and your text never leaves your browser. It even works offline.',
+      'Free, open source developer tools that run in your browser: diff checker, JSON diff, formatter, validator, JSON to CSV and YAML, and a viewer. No uploads.',
+    name: 'All tools',
+    blurb: 'Every diffdrop tool on one page.',
+    priority: 1.0,
+  },
+  {
+    id: 'diff-checker',
+    path: '/diff-checker/',
+    title: 'Diff checker - compare text and code online, free | diffdrop',
+    description:
+      'Compare two texts, code or files side by side, line by line and word by word. Free and open source, no account, and your text never leaves your browser.',
     name: 'Diff checker',
     blurb: 'Compare two texts or files, line by line and word by word.',
-    priority: 1.0,
+    priority: 0.9,
   },
   {
     id: 'json-diff',

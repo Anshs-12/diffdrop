@@ -483,7 +483,7 @@ const App: React.FC<{ variant: Variant }> = ({ variant }) => {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <SiteHeader current={isJson ? 'json-diff' : 'home'} theme={theme} onThemeChange={setTheme} />
+      <SiteHeader current={isJson ? 'json-diff' : 'diff-checker'} theme={theme} onThemeChange={setTheme} />
       <main>
         <Hero variant={variant} onTryExample={handleExample} />
 
@@ -572,12 +572,12 @@ const App: React.FC<{ variant: Variant }> = ({ variant }) => {
         </section>
 
         {isJson && <JsonGuide />}
-        <ToolCards current={isJson ? 'json-diff' : 'home'} />
+        <ToolCards current={isJson ? 'json-diff' : 'diff-checker'} />
         <Features />
         <Paywall />
         <Privacy />
       </main>
-      <Footer current={isJson ? 'json-diff' : 'home'} />
+      <Footer current={isJson ? 'json-diff' : 'diff-checker'} />
 
       {printing && result && printModel && (
         <div className="print-only">
