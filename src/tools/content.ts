@@ -53,7 +53,10 @@ export const TOOL_CONTENT: Record<ToolId, ToolContent> = {
       { title: 'Copy or download', body: 'The formatted JSON updates as you type. Syntax errors are shown with their exact line and column.' },
     ],
     faq: [
-      { q: 'Does formatting change my data?', a: 'No. Only whitespace changes (and key order, if you choose to sort). Values, types and array order stay exactly the same.' },
+      {
+        q: 'Does formatting change my data?',
+        a: 'Values, types and array order stay the same, and numbers are kept exactly as written: 1.0 stays 1.0 and long IDs are never rounded. Two exceptions, both flagged with a warning: if a key appears twice in one object, only the last value is kept, and number-like keys such as "1" move to the front of their object, a rule every browser applies.',
+      },
       { q: 'Is there a size limit?', a: 'No fixed limit. Files of tens of megabytes work; the only limit is your browser’s memory.' },
       { q: 'Is my JSON sent anywhere?', a: 'No. Formatting happens in this tab, and the page is blocked from sending your data to any server.' },
     ],
@@ -69,6 +72,7 @@ export const TOOL_CONTENT: Record<ToolId, ToolContent> = {
     faq: [
       { q: 'Why is my JSON invalid?', a: 'The usual suspects are a comma after the last item, keys or strings in single quotes, unquoted keys, comments, or a missing closing bracket. JSON is stricter than JavaScript.' },
       { q: 'Which JSON standard is used?', a: 'Strict JSON (RFC 8259), the same rules as JSON.parse in every browser.' },
+      { q: 'Does it catch duplicate keys?', a: 'Yes. Duplicate keys are technically allowed, so the JSON still counts as valid, but you get a warning with the line and column, because most parsers silently keep only the last value.' },
       { q: 'Is my JSON sent anywhere?', a: 'No. Validation happens in this tab; nothing is uploaded.' },
     ],
   },
@@ -76,13 +80,14 @@ export const TOOL_CONTENT: Record<ToolId, ToolContent> = {
     h1: 'JSON to CSV converter',
     lede: 'Turn a JSON array into a CSV file you can open in Excel, Google Sheets or Numbers. Nested objects become columns like address.city. Runs in your browser.',
     steps: [
-      { title: 'Paste or open your JSON', body: 'An array of objects works best: each object becomes a row. A single object becomes one row.' },
+      { title: 'Paste or open your JSON', body: 'An array of objects works best: each object becomes a row. An API response like {"data": [...]} uses its array automatically.' },
       { title: 'Pick a delimiter', body: 'Comma for most tools, semicolon for spreadsheets in regions that use a decimal comma, or tab.' },
       { title: 'Download the CSV', body: 'Columns are every key found, in the order first seen. Lists inside a row are kept as JSON in one cell.' },
     ],
     faq: [
       { q: 'How are nested objects handled?', a: 'They are flattened into dotted column names: {"address": {"city": "London"}} becomes a column address.city.' },
       { q: 'What about arrays inside objects?', a: 'They are written into a single cell as JSON text (for example ["admin","editor"]), so no data is lost.' },
+      { q: 'Will Excel open it correctly?', a: 'Yes. Downloads start with a UTF-8 byte order mark, so accented letters and emoji show correctly in Excel. Turn on Escape formulas if the data came from someone else: cells starting with = + - or @ then can’t run as formulas.' },
       { q: 'Is my data uploaded?', a: 'No. The conversion runs in this tab; your data never leaves your browser.' },
     ],
   },

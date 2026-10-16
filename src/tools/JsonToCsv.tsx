@@ -1,5 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { jsonToCsv, type Delimiter } from '@/lib/jsonTools';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import CodeEditor, { type CodeEditorHandle } from './CodeEditor';
 import { InputActions, JsonStatusLine, OutputActions, Panel, useJsonInput } from './shared';
@@ -15,12 +17,17 @@ const DELIMITERS: { value: Delimiter; label: string; id: string }[] = [
 export default function JsonToCsv() {
   const { text, setText, parsed } = useJsonInput();
   const [delimiter, setDelimiter] = useState<Delimiter>(',');
+  const [escapeFormulas, setEscapeFormulas] = useState(false);
   const inputRef = useRef<CodeEditorHandle>(null);
 
-  const result = useMemo(() => (parsed.status === 'valid' ? jsonToCsv(parsed.value, delimiter) : null), [parsed, delimiter]);
+  const result = useMemo(
+    () => (parsed.status === 'valid' ? jsonToCsv(parsed.value, { delimiter, escapeFormulas }) : null),
+    [parsed, delimiter, escapeFormulas],
+  );
   const note =
     result &&
-    `${result.rows.toLocaleString()} row${result.rows === 1 ? '' : 's'}, ${result.columns.length} column${result.columns.length === 1 ? '' : 's'}`;
+    `${result.rows.toLocaleString()} row${result.rows === 1 ? '' : 's'}, ${result.columns.length} column${result.columns.length === 1 ? '' : 's'}` +
+      (result.unwrapped ? `, from the ${JSON.stringify(result.unwrapped)} array` : '');
 
   return (
     <>
@@ -39,6 +46,16 @@ export default function JsonToCsv() {
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
+        <div className="flex items-center gap-2">
+          <Switch id="escape-formulas" size="sm" checked={escapeFormulas} onCheckedChange={setEscapeFormulas} />
+          <Label
+            htmlFor="escape-formulas"
+            className="cursor-pointer text-[13px] font-normal text-muted-foreground"
+            title="Prefix cells starting with = + - @ or a tab with ' so Excel and Sheets don't run them as formulas"
+          >
+            Escape formulas
+          </Label>
+        </div>
       </ToolBar>
       <JsonStatusLine parsed={parsed} onJump={(l, c) => inputRef.current?.goToLine(l, c)} validNote={note} />
       <div className="tool-panes">
@@ -61,6 +78,7 @@ export default function JsonToCsv() {
               text={result?.csv ?? ''}
               fileName={delimiter === '\t' ? 'data.tsv' : 'data.csv'}
               mime={delimiter === '\t' ? 'text/tab-separated-values' : 'text/csv'}
+              bom
             />
           }
         >

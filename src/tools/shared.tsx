@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { CircleAlert, CircleCheck, Copy, Download, FolderOpen, Trash2 } from 'lucide-react';
+import { CircleAlert, CircleCheck, Copy, Download, FolderOpen, Trash2, TriangleAlert } from 'lucide-react';
 import { checkJson, type JsonCheck } from '@/lib/json';
+import { parseJson, scanJson, type JsonScan } from '@/lib/jsonValue';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -12,7 +13,7 @@ const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
 export type Parsed =
   | { status: 'empty' }
-  | { status: 'valid'; value: unknown }
+  | { status: 'valid'; value: unknown; scan: JsonScan }
   | { status: 'invalid'; check: Extract<JsonCheck, { status: 'invalid' }> };
 
 /** JSON text plus its parsed value (or the error), re-parsed as the text changes. */
@@ -32,7 +33,8 @@ export function useJsonInput(initial = '') {
   const parsed = useMemo<Parsed>(() => {
     if (!settled.trim()) return { status: 'empty' };
     try {
-      return { status: 'valid', value: JSON.parse(settled) as unknown };
+      const value = parseJson(settled);
+      return { status: 'valid', value, scan: scanJson(settled) };
     } catch {
       const check = checkJson(settled);
       return check.status === 'invalid'
@@ -132,8 +134,8 @@ export function InputActions({ onLoad, onClear, canClear }: { onLoad: (text: str
   );
 }
 
-/** Copy and download buttons for an output. */
-export function OutputActions({ text, fileName, mime }: { text: string; fileName: string; mime: string }) {
+/** Copy and download buttons for an output. `bom` starts the downloaded file with a UTF-8 byte order mark (for Excel). */
+export function OutputActions({ text, fileName, mime, bom = false }: { text: string; fileName: string; mime: string; bom?: boolean }) {
   return (
     <>
       <IconButton
@@ -154,7 +156,7 @@ export function OutputActions({ text, fileName, mime }: { text: string; fileName
         label={`Download ${fileName}`}
         disabled={!text}
         onClick={() => {
-          const url = URL.createObjectURL(new Blob([text], { type: mime }));
+          const url = URL.createObjectURL(new Blob(bom ? ['\uFEFF', text] : [text], { type: `${mime};charset=utf-8` }));
           const a = document.createElement('a');
           a.href = url;
           a.download = fileName;
@@ -166,6 +168,23 @@ export function OutputActions({ text, fileName, mime }: { text: string; fileName
       </IconButton>
     </>
   );
+}
+
+/** Things about valid JSON that the tools can't keep as written. */
+function warnings(scan: JsonScan): string[] {
+  const out: string[] = [];
+  if (scan.duplicateCount) {
+    const d = scan.duplicates[0]!;
+    const more = scan.duplicateCount > 1 ? ` (and ${scan.duplicateCount - 1} more)` : '';
+    out.push(`Duplicate key ${JSON.stringify(d.key)} at line ${d.line}, column ${d.column}${more}: only the last value is kept`);
+  }
+  if (scan.reorderedKeys) out.push('Number-like keys ("1", "42") are listed first in their object; browsers always order them that way');
+  if (scan.roundedNumbers) {
+    out.push(
+      `${scan.roundedNumbers.toLocaleString()} number${scan.roundedNumbers === 1 ? '' : 's'} like ${scan.roundedExample} can't be kept exactly in this browser and will be rounded`,
+    );
+  }
+  return out;
 }
 
 /** One-line status under the toolbar: valid / empty / the error with its position. */
@@ -187,6 +206,11 @@ export function JsonStatusLine({
             <CircleCheck className="size-3.5" aria-hidden="true" /> Valid JSON
           </span>
           {validNote && <span className="text-muted-foreground">{validNote}</span>}
+          {warnings(parsed.scan).map((w) => (
+            <span key={w} className="inline-flex basis-full items-start gap-1.5 text-amber-700 dark:text-amber-400">
+              <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" /> {w}
+            </span>
+          ))}
         </>
       )}
       {parsed.status === 'invalid' && (

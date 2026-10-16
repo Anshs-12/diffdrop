@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Search } from 'lucide-react';
 import { pathString } from '@/lib/jsonTools';
+import { isContainer, isJsonNumber } from '@/lib/jsonValue';
 import { Button } from '@/components/ui/button';
 import CodeEditor, { type CodeEditorHandle } from './CodeEditor';
 import { InputActions, JsonStatusLine, Panel, useJsonInput } from './shared';
@@ -26,26 +27,31 @@ const ROW = 26;
 const MAX_ROWS = 200_000;
 const MAX_MATCHES = 1_000;
 
-const isContainer = (v: unknown): v is object => v !== null && typeof v === 'object';
 const entriesOf = (v: object): [string | number, unknown][] =>
   Array.isArray(v) ? v.map((x, i) => [i, x]) : Object.entries(v);
 
-/** The rows currently visible: the root plus children of every expanded container. */
-function visibleRows(root: unknown, expanded: Set<string>): Row[] {
+/**
+ * The rows currently visible: the root plus children of every expanded
+ * container. With a filter (search results), only rows it shows, plus anything
+ * inside a matching row, are included.
+ */
+function visibleRows(root: unknown, expanded: Set<string>, filter?: { shown: Set<string>; matches: Set<string> }): Row[] {
   const rows: Row[] = [];
-  const stack: { path: Path; key: string | number | null; value: unknown; depth: number }[] = [
-    { path: [], key: null, value: root, depth: 0 },
+  const stack: { path: Path; key: string | number | null; value: unknown; depth: number; free: boolean }[] = [
+    { path: [], key: null, value: root, depth: 0, free: !filter },
   ];
   while (stack.length && rows.length < MAX_ROWS) {
-    const { path, key, value, depth } = stack.pop()!;
+    const { path, key, value, depth, free: parentFree } = stack.pop()!;
     const id = pathString(path);
+    if (!parentFree && !filter!.shown.has(id)) continue;
+    const free = parentFree || filter!.matches.has(id);
     const container = isContainer(value);
     const children = container ? entriesOf(value) : [];
     rows.push({ id, path, key, value, depth, isContainer: container, size: children.length });
     if (container && expanded.has(id)) {
       for (let i = children.length - 1; i >= 0; i--) {
         const [k, v] = children[i]!;
-        stack.push({ path: [...path, k], key: k, value: v, depth: depth + 1 });
+        stack.push({ path: [...path, k], key: k, value: v, depth: depth + 1, free });
       }
     }
   }
@@ -94,7 +100,7 @@ function preview(row: Row): { text: string; cls: string } {
     return { text: array ? `[${row.size}]` : `{${row.size}}`, cls: 'text-faint' };
   }
   if (typeof v === 'string') return { text: JSON.stringify(v), cls: 'tok-string' };
-  if (typeof v === 'number') return { text: String(v), cls: 'tok-number' };
+  if (typeof v === 'number' || isJsonNumber(v)) return { text: String(v), cls: 'tok-number' };
   return { text: String(v), cls: 'tok-literal' };
 }
 
@@ -110,7 +116,12 @@ function TreeView({ root }: { root: unknown }) {
     for (const id of search.open) merged.add(id);
     return merged;
   }, [expanded, search]);
-  const rows = useMemo(() => visibleRows(root, effectiveExpanded), [root, effectiveExpanded]);
+  // While searching, show only the matches and the branches leading to them
+  const filter = useMemo(
+    () => (search ? { shown: new Set([...search.matches, ...search.open]), matches: search.matches } : undefined),
+    [search],
+  );
+  const rows = useMemo(() => visibleRows(root, effectiveExpanded, filter), [root, effectiveExpanded, filter]);
 
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -152,7 +163,7 @@ function TreeView({ root }: { root: unknown }) {
           className="h-7 min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-faint"
         />
         {search && (
-          <span className="font-mono text-xs text-muted-foreground tabular-nums">
+          <span className="font-mono text-xs text-muted-foreground tabular-nums" aria-live="polite">
             {search.matches.size >= MAX_MATCHES ? `${MAX_MATCHES}+` : search.matches.size} match
             {search.matches.size === 1 ? '' : 'es'}
           </span>
@@ -176,7 +187,8 @@ function TreeView({ root }: { root: unknown }) {
         <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
           {virtualizer.getVirtualItems().map((item) => {
             const row = rows[item.index]!;
-            const open = effectiveExpanded.has(row.id);
+            const expandable = row.isContainer && row.size > 0;
+            const open = expandable && effectiveExpanded.has(row.id);
             const hit = search?.matches.has(row.id);
             const p = preview(row);
             return (
@@ -184,11 +196,11 @@ function TreeView({ root }: { root: unknown }) {
                 key={row.id}
                 role="treeitem"
                 aria-level={row.depth + 1}
-                aria-expanded={row.isContainer ? open : undefined}
+                aria-expanded={expandable ? open : undefined}
                 className={`tree-row${hit ? ' is-hit' : ''}`}
                 style={{ transform: `translateY(${item.start}px)`, paddingLeft: 8 + row.depth * 16 }}
               >
-                {row.isContainer ? (
+                {expandable ? (
                   <button
                     type="button"
                     className="tree-toggle"

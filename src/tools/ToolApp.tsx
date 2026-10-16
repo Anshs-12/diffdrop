@@ -20,7 +20,6 @@ type ToolId = keyof typeof TOOLS;
 const SECTIONS: HeaderSection[] = [
   { id: 'tool', label: 'Tool' },
   { id: 'how', label: 'How it works' },
-  { id: 'tools', label: 'More tools' },
   { id: 'privacy', label: 'Privacy' },
 ];
 
@@ -33,7 +32,7 @@ export default function ToolApp({ page }: { page: PageId }) {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <SiteHeader sections={SECTIONS} theme={theme} onThemeChange={setTheme} />
+      <SiteHeader current={page} sections={SECTIONS} theme={theme} onThemeChange={setTheme} />
       <main>
         <section id="top" className="page pt-12 pb-8 sm:pt-16">
           <p className="font-mono text-[12.5px] text-muted-foreground">free · no account · runs in your browser</p>

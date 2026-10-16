@@ -18,6 +18,7 @@ function readChoice(): ThemeChoice {
 
 function resolve(choice: ThemeChoice): ResolvedTheme {
   if (choice !== 'system') return choice;
+  if (typeof window === 'undefined') return 'light'; // prerendering
   return window.matchMedia(DARK_QUERY).matches ? 'dark' : 'light';
 }
 

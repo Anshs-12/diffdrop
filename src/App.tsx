@@ -483,7 +483,7 @@ const App: React.FC<{ variant: Variant }> = ({ variant }) => {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <SiteHeader theme={theme} onThemeChange={setTheme} />
+      <SiteHeader current={isJson ? 'json-diff' : 'home'} theme={theme} onThemeChange={setTheme} />
       <main>
         <Hero variant={variant} onTryExample={handleExample} />
 

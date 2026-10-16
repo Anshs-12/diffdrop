@@ -1,5 +1,6 @@
 import { useMemo, useRef } from 'react';
 import { jsonStats } from '@/lib/jsonTools';
+import { Button } from '@/components/ui/button';
 import CodeEditor, { type CodeEditorHandle } from './CodeEditor';
 import { InputActions, JsonStatusLine, Panel, byteLength, formatBytes, useJsonInput } from './shared';
 import { EXAMPLE_JSON } from './content';
@@ -17,7 +18,14 @@ export default function JsonValidator() {
 
   return (
     <>
-      <ToolBar onExample={() => setText(text === BROKEN_EXAMPLE ? EXAMPLE_JSON : BROKEN_EXAMPLE)} />
+      <ToolBar
+        onExample={() => setText(EXAMPLE_JSON)}
+        extra={
+          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setText(BROKEN_EXAMPLE)}>
+            Example with an error
+          </Button>
+        }
+      />
       <JsonStatusLine
         parsed={parsed}
         onJump={(l, c) => inputRef.current?.goToLine(l, c)}
