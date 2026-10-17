@@ -950,6 +950,11 @@
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   }
 
+  /* As tall as the editor pane beside it (editor + its 44px header); longer stats scroll inside */
+  .counter-stats {
+    max-height: calc(min(68vh, 640px) + 44px);
+  }
+
   /* Markdown preview: GitHub-like */
   .markdown-body {
     font-size: 15px;
@@ -1273,6 +1278,10 @@
 
     .tool-tree-panel {
       height: 480px;
+    }
+
+    .counter-stats {
+      max-height: none;
     }
   }
 

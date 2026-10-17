@@ -151,16 +151,16 @@ export const Features: React.FC = () => (
             </p>
           </div>
         </div>
-        <div className="flex items-center border-t bg-[#0a0a0a] p-5 sm:p-8 lg:border-t-0 lg:border-l">
-          <pre className="w-full overflow-x-auto font-mono text-[12.5px] leading-[1.8] text-[#d4d4d4]" aria-label="Example git-style diff">
-            <span className="text-[#737373]">$ git diff cart.js{'\n'}</span>
-            <span className="text-[#737373]">@@ -3,3 +3,4 @@{'\n'}</span>
-            <span className="block rounded-sm bg-[rgba(255,82,70,0.2)] px-1 text-[#ff8a80]">- const TAX_RATE = 0.08;</span>
-            <span className="block rounded-sm bg-[rgba(46,204,113,0.2)] px-1 text-[#5be08f]">+ const TAX_RATE = 0.0825;</span>
-            <span className="block rounded-sm bg-[rgba(46,204,113,0.2)] px-1 text-[#5be08f]">+ const FREE_SHIPPING = 50;</span>
+        <div className="flex items-center border-t bg-muted p-5 sm:p-8 lg:border-t-0 lg:border-l">
+          <pre className="w-full overflow-x-auto font-mono text-[12.5px] leading-[1.8] text-foreground" aria-label="Example git-style diff">
+            <span className="text-muted-foreground">$ git diff cart.js{'\n'}</span>
+            <span className="text-muted-foreground">@@ -3,3 +3,4 @@{'\n'}</span>
+            <span className="block rounded-sm bg-del-bg px-1 text-del">- const TAX_RATE = 0.08;</span>
+            <span className="block rounded-sm bg-add-bg px-1 text-add">+ const TAX_RATE = 0.0825;</span>
+            <span className="block rounded-sm bg-add-bg px-1 text-add">+ const FREE_SHIPPING = 50;</span>
             <span className="block px-1">{'  '}</span>
             <span className="block px-1">{'  '}export function calculateTotal(items) {'{'}</span>
-            <span className="mt-3 block text-[#737373]">diffdrop shows the same 2 additions, 1 removal.</span>
+            <span className="mt-3 block text-muted-foreground">diffdrop shows the same 2 additions, 1 removal.</span>
           </pre>
         </div>
       </div>

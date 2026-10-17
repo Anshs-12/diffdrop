@@ -32,7 +32,7 @@ export default function WordCounterTool() {
         <Panel title="text" actions={<InputActions onLoad={setText} onClear={() => setText('')} canClear={!!text} accept="text/*,.txt,.md,.csv,.html" />}>
           <CodeEditor value={text} onChange={setText} lang={null} wrap placeholder="Type or paste your text" ariaLabel="Text to count" className="tool-editor" />
         </Panel>
-        <div className="flex min-w-0 flex-col gap-4 overflow-auto p-4" aria-label="Counts">
+        <div className="counter-stats flex min-w-0 flex-col gap-4 overflow-auto p-4" aria-label="Counts">
           <dl className="grid grid-cols-2 gap-2">
             <Stat label="Words" value={s.words} />
             <Stat label="Characters" value={s.characters} />
