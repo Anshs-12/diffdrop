@@ -37,7 +37,7 @@ for (const tool of TOOLS) {
     expect(html).toContain('How it works');
     const ld = JSON.parse(/<script type="application\/ld\+json">(.*?)<\/script>/.exec(html)![1]!);
     const types = ld['@graph'].map((g: { '@type': string }) => g['@type']);
-    expect(types).toEqual(['SoftwareApplication', 'FAQPage']);
+    expect(types).toEqual(['SoftwareApplication', 'FAQPage', 'BreadcrumbList']);
     // Each FAQ answer is on the page itself
     for (const q of ld['@graph'][1].mainEntity) expect(html).toContain(q.name.replace(/"/g, '&quot;').replace(/'/g, '&#x27;'));
   });

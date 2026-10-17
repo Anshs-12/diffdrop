@@ -74,16 +74,17 @@ export default function RegexTool() {
       >
         <ToggleGroup type="multiple" variant="outline" size="sm" value={flags} onValueChange={setFlags} aria-label="Flags">
           {FLAGS.map((f) => (
-            <Tooltip key={f.flag}>
-              <TooltipTrigger asChild>
-                <ToggleGroupItem value={f.flag} aria-label={`${f.name} (${f.flag})`} className="font-mono">
-                  {f.flag}
-                </ToggleGroupItem>
-              </TooltipTrigger>
-              <TooltipContent>
-                {f.flag}: {f.description}
-              </TooltipContent>
-            </Tooltip>
+            <ToggleGroupItem key={f.flag} value={f.flag} aria-label={`${f.name} (${f.flag})`} className="font-mono">
+              {/* Inside the item, so the tooltip doesn't overwrite its on/off state */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>{f.flag}</span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {f.flag}: {f.description}
+                </TooltipContent>
+              </Tooltip>
+            </ToggleGroupItem>
           ))}
         </ToggleGroup>
         <div className="flex items-center gap-2">

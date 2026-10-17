@@ -78,7 +78,10 @@ const OPTIONS: { key: keyof ToolbarOptions; label: string; tip: string; belowOnl
   { key: 'lineWrap', label: 'Wrap lines', tip: 'Wrap long lines instead of scrolling sideways', belowOnly: true },
 ];
 
-/** A button with a tooltip; the label is hidden on small screens and kept for screen readers. */
+/**
+ * A button with a tooltip. The label shows on phones (no hover, so no tooltip;
+ * the toolbar wraps) and on wide screens; in between it's icon-only.
+ */
 const ActionButton: React.FC<{
   icon: React.ReactNode;
   label: string;
@@ -97,7 +100,7 @@ const ActionButton: React.FC<{
         className={pressed ? 'bg-accent' : undefined}
       >
         {icon}
-        <span className="hidden xl:inline">{label}</span>
+        <span className="sm:hidden xl:inline">{label}</span>
       </Button>
     </TooltipTrigger>
     <TooltipContent>{tip}</TooltipContent>
@@ -115,24 +118,29 @@ const Toolbar: React.FC<ToolbarProps> = (p) => (
         onValueChange={(v) => v && p.onPlacementChange(v as HighlightPlacement)}
         aria-label="Where to show changes"
       >
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <ToggleGroupItem value="editor" aria-label="Highlight changes in the editors">
-              <TextCursorInput />
-              <span className="hidden sm:inline">In editor</span>
-            </ToggleGroupItem>
-          </TooltipTrigger>
-          <TooltipContent>Real-time: highlight changes inside the text boxes as you type</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <ToggleGroupItem value="below" aria-label="Show changes in a separate panel">
-              <PanelBottom />
-              <span className="hidden sm:inline">Separate</span>
-            </ToggleGroupItem>
-          </TooltipTrigger>
-          <TooltipContent>Show the diff in its own panel below the editors</TooltipContent>
-        </Tooltip>
+        {/* Tooltips sit inside the items: as the trigger, they would overwrite the item's data-state (on/off) */}
+        <ToggleGroupItem value="editor" aria-label="Highlight changes in the editors">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex items-center gap-2">
+                <TextCursorInput />
+                <span>In editor</span>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Real-time: highlight changes inside the text boxes as you type</TooltipContent>
+          </Tooltip>
+        </ToggleGroupItem>
+        <ToggleGroupItem value="below" aria-label="Show changes in a separate panel">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex items-center gap-2">
+                <PanelBottom />
+                <span>Separate</span>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Show the diff in its own panel below the editors</TooltipContent>
+          </Tooltip>
+        </ToggleGroupItem>
       </ToggleGroup>
 
       {p.placement === 'below' && (
@@ -144,13 +152,13 @@ const Toolbar: React.FC<ToolbarProps> = (p) => (
           onValueChange={(v) => v && p.onViewModeChange(v as ViewMode)}
           aria-label="Diff layout"
         >
-          <ToggleGroupItem value="split" aria-label="Side by side">
+          <ToggleGroupItem value="split" aria-label="Side by side" title="Side by side">
             <Columns2 />
-            <span className="hidden sm:inline">Split</span>
+            <span>Split</span>
           </ToggleGroupItem>
-          <ToggleGroupItem value="unified" aria-label="Unified">
+          <ToggleGroupItem value="unified" aria-label="Unified" title="Unified: one column, removed lines above added ones">
             <Rows2 />
-            <span className="hidden sm:inline">Unified</span>
+            <span>Unified</span>
           </ToggleGroupItem>
         </ToggleGroup>
       )}

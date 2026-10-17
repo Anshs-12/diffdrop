@@ -89,7 +89,7 @@ export const PAGES: Page[] = [
   {
     id: 'json-formatter',
     path: '/json-formatter/',
-    title: 'JSON formatter - beautify and minify JSON, free | diffdrop',
+    title: 'JSON formatter - beautify and minify, no sign-up | diffdrop',
     description:
       'Format, beautify or minify JSON online. Pick the indentation, sort keys, and see errors by line and column. Free, and your JSON never leaves your browser.',
     name: 'JSON formatter',
@@ -139,7 +139,7 @@ export const PAGES: Page[] = [
   {
     id: 'base64',
     path: '/base64-encode-decode/',
-    title: 'Base64 encode and decode online, free | diffdrop',
+    title: 'Base64 encode and decode online, no sign-up | diffdrop',
     description:
       'Encode text or files to Base64 and decode Base64 back to text, images or files. UTF-8 safe, URL-safe option, clear errors. Free, and nothing is uploaded.',
     name: 'Base64 encoder',
@@ -151,7 +151,7 @@ export const PAGES: Page[] = [
     path: '/unix-timestamp-converter/',
     title: 'Unix timestamp converter - epoch to date, free | diffdrop',
     description:
-      'Convert Unix timestamps to dates and dates to timestamps. Seconds, ms, µs or ns detected automatically, any time zone, ISO 8601 and more. Free, in browser.',
+      'Convert Unix timestamps to dates and back. Seconds, milliseconds, microseconds or nanoseconds detected for you, any time zone, ISO 8601. Free.',
     name: 'Timestamp converter',
     blurb: 'Convert Unix epoch time to dates and back.',
     priority: 0.8,
@@ -159,7 +159,7 @@ export const PAGES: Page[] = [
   {
     id: 'jwt-decoder',
     path: '/jwt-decoder/',
-    title: 'JWT decoder - decode and verify JSON Web Tokens | diffdrop',
+    title: 'JWT decoder - decode and verify, no sign-up | diffdrop',
     description:
       'Decode a JWT to read its header, payload and expiry, then verify the signature with a secret or public key. Free, and your token never leaves your browser.',
     name: 'JWT decoder',
@@ -229,7 +229,7 @@ export const PAGES: Page[] = [
   {
     id: 'word-counter',
     path: '/word-counter/',
-    title: 'Word counter - count words, characters, sentences | diffdrop',
+    title: 'Word counter - words and characters, no sign-up | diffdrop',
     description:
       'Count words, characters with and without spaces, sentences and paragraphs as you type, plus reading time and top keywords. Free, private, and no sign-up.',
     name: 'Word counter',
@@ -239,9 +239,9 @@ export const PAGES: Page[] = [
   {
     id: 'password-generator',
     path: '/password-generator/',
-    title: 'Password generator - strong, random passwords | diffdrop',
+    title: 'Password generator - strong, random, no sign-up | diffdrop',
     description:
-      'Generate strong random passwords with your browser’s secure random generator. Pick the length and characters, see the strength. Free, nothing is stored.',
+      'Generate strong random passwords with your browser\'s secure random generator. Pick the length and characters, see the strength. Nothing is stored.',
     name: 'Password generator',
     blurb: 'Generate strong random passwords, made in your browser.',
     priority: 0.8,
@@ -251,7 +251,7 @@ export const PAGES: Page[] = [
     path: '/lorem-ipsum-generator/',
     title: 'Lorem ipsum generator - placeholder text | diffdrop',
     description:
-      'Generate lorem ipsum placeholder text by paragraphs, sentences or words, as plain text or HTML, starting with the classic "Lorem ipsum dolor sit amet".',
+      'Generate lorem ipsum placeholder text by paragraphs, sentences or words, as plain text or HTML, starting with the classic Lorem ipsum dolor sit amet.',
     name: 'Lorem ipsum',
     blurb: 'Generate placeholder text by paragraph, sentence or word.',
     priority: 0.7,
@@ -291,7 +291,7 @@ export const PAGES: Page[] = [
     path: '/code-beautifier/',
     title: 'Code beautifier - Python, Java, C++, Go and more | diffdrop',
     description:
-      'Format Python, Java, C, C++, C#, Go, PHP, JavaScript, TypeScript, Lua, Shell, SQL, HTML, CSS, JSON and YAML with each language’s own formatter, in browser.',
+      'Format Python, Java, C, C++, C#, Go, PHP, JavaScript, TypeScript, SQL, HTML, CSS, JSON and YAML with each language\'s own formatter. Free, in browser.',
     name: 'Code beautifier',
     blurb: 'Format Python, Java, C++, C#, Go, JS, PHP and more.',
     priority: 0.8,

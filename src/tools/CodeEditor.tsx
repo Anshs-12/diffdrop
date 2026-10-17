@@ -139,8 +139,11 @@ const theme = EditorView.theme({
     fontSize: '11.5px',
   },
   '.cm-lineNumbers .cm-gutterElement': { padding: '0 9px 0 8px', minWidth: '40px' },
-  '.cm-placeholder': { color: 'var(--text-faint)' },
+  '.cm-placeholder': { color: 'var(--text-faint)', whiteSpace: 'normal' },
 });
+
+const NARROW = '(max-width: 640px)';
+const narrow = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia(NARROW).matches;
 
 /** Pastes of more than this many lines load as a fresh document (see EditorPanel). */
 const LARGE_INSERT_LINES = 2_000;
@@ -156,6 +159,8 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
     const extensionsRef = useRef<Extension[]>([]);
     // The label can change when one editor shows different things (encode vs decode output)
     const labelRef = useRef(new Compartment());
+    // Long lines wrap when asked, and always on phone-width screens (no sideways scrolling inside a pane)
+    const wrapRef = useRef(new Compartment());
     const labelAttrs = (label: string) => EditorView.contentAttributes.of({ 'aria-label': label, spellcheck: 'false', autocorrect: 'off' });
 
     useEffect(() => {
@@ -169,7 +174,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
         search({ top: true }),
         keymap.of([...searchKeymap, ...defaultKeymap, ...historyKeymap]),
         EditorState.readOnly.of(readOnly),
-        ...(wrap ? [EditorView.lineWrapping] : []),
+        wrapRef.current.of(wrap || narrow() ? EditorView.lineWrapping : []),
         labelRef.current.of(labelAttrs(ariaLabel)),
         ...(placeholder ? [placeholderExt(placeholder)] : []),
         errorField,
@@ -202,7 +207,11 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
         state: EditorState.create({ doc: lastValue.current, extensions }),
       });
       viewRef.current = view;
+      const mq = typeof window.matchMedia === 'function' ? window.matchMedia(NARROW) : null;
+      const onWidth = () => view.dispatch({ effects: wrapRef.current.reconfigure(wrap || narrow() ? EditorView.lineWrapping : []) });
+      mq?.addEventListener('change', onWidth);
       return () => {
+        mq?.removeEventListener('change', onWidth);
         view.destroy();
         viewRef.current = null;
       };

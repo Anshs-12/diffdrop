@@ -52,13 +52,24 @@ function contentSecurityPolicy(): Plugin {
 
 const isToolPage = (id: PageId): id is keyof typeof TOOL_CONTENT => id in TOOL_CONTENT;
 
-/** schema.org data for search engines: the app, plus the FAQ on tool pages. */
+/** Home → page, for the breadcrumb search results show under the title. */
+function breadcrumb(page: Page): object {
+  return {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'diffdrop', item: `${SITE_URL}/` },
+      { '@type': 'ListItem', position: 2, name: page.name, item: `${SITE_URL}${page.path}` },
+    ],
+  };
+}
+
+/** schema.org data for search engines: the app or article, its FAQ, and a breadcrumb. */
 function structuredData(page: Page): HtmlTagDescriptor {
   const url = `${SITE_URL}${page.path}`;
+  const graph: object[] = [];
   const guide = GUIDE_META[page.id as keyof typeof GUIDE_META];
   if (guide) {
-    const article = {
-      '@context': 'https://schema.org',
+    graph.push({
       '@type': { guide: 'TechArticle', about: 'AboutPage', contact: 'ContactPage' }[guide.kind],
       [guide.kind === 'guide' ? 'headline' : 'name']: guide.h1,
       description: page.description,
@@ -68,12 +79,9 @@ function structuredData(page: Page): HtmlTagDescriptor {
       author: { '@type': 'Organization', name: 'diffdrop', url: `${SITE_URL}/` },
       publisher: { '@type': 'Organization', name: 'diffdrop', url: `${SITE_URL}/` },
       mainEntityOfPage: url,
-    };
-    const json = JSON.stringify(article).replace(/</g, '\\u003c');
-    return { tag: 'script', attrs: { type: 'application/ld+json' }, children: json, injectTo: 'head' };
-  }
-  const graph: object[] = [
-    {
+    });
+  } else {
+    graph.push({
       '@type': 'SoftwareApplication',
       name: page.id === 'home' ? 'diffdrop' : `${page.name} by diffdrop`,
       url,
@@ -82,8 +90,8 @@ function structuredData(page: Page): HtmlTagDescriptor {
       operatingSystem: 'Any (runs in the browser)',
       isAccessibleForFree: true,
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-    },
-  ];
+    });
+  }
   const faq = isToolPage(page.id)
     ? TOOL_CONTENT[page.id].faq
     : page.id === 'diff-checker' || page.id === 'json-diff'
@@ -99,6 +107,7 @@ function structuredData(page: Page): HtmlTagDescriptor {
       })),
     });
   }
+  if (page.id !== 'home') graph.push(breadcrumb(page));
   // Not executed, so the CSP doesn't apply; "<" escaped so text can't close the tag
   const json = JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replace(/</g, '\\u003c');
   return { tag: 'script', attrs: { type: 'application/ld+json' }, children: json, injectTo: 'head' };

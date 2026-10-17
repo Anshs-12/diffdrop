@@ -53,7 +53,7 @@ export default function ToolApp({ page }: { page: PageId }) {
           </div>
         }
       >
-        <ToolGuide steps={content.steps} faq={content.faq} />
+        <ToolGuide steps={content.steps} faq={content.faq} example={content.example} mistakes={content.mistakes} />
       </ToolShell>
       <Footer current={page} />
       <Toaster theme={resolved} position="bottom-center" />

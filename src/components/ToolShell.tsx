@@ -241,12 +241,54 @@ export function ToolGuide({
   steps,
   faq,
   stepsTitle = 'How it works',
+  example,
+  mistakes,
 }: {
   steps: { title: string; body: string }[];
   faq: { q: string; a: string }[];
   stepsTitle?: string;
+  example?: { intro: string; inputLabel: string; input: string; outputLabel: string; output: string; note?: string };
+  mistakes?: { title: string; body: string }[];
 }) {
   return (
+    <>
+      {example && (
+        <section id="example" className="mt-12 border-t pt-10" aria-labelledby="example-heading">
+          <h2 id="example-heading" className="text-[18px] font-semibold tracking-[-0.015em]">
+            Worked example
+          </h2>
+          <p className="mt-2 max-w-[80ch] text-[14.5px] text-muted-foreground">{example.intro}</p>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {(
+              [
+                [example.inputLabel, example.input],
+                [example.outputLabel, example.output],
+              ] as const
+            ).map(([label, text]) => (
+              <figure key={label} className="min-w-0 overflow-hidden rounded-xl border bg-card">
+                <figcaption className="border-b px-3 py-2 font-mono text-[11.5px] text-muted-foreground">{label}</figcaption>
+                <pre className="overflow-x-auto px-3 py-2.5 font-mono text-[12.5px] leading-relaxed whitespace-pre-wrap">{text}</pre>
+              </figure>
+            ))}
+          </div>
+          {example.note && <p className="mt-3 max-w-[80ch] text-[14px] text-muted-foreground">{example.note}</p>}
+        </section>
+      )}
+      {mistakes && (
+        <section id="mistakes" className="mt-12 border-t pt-10" aria-labelledby="mistakes-heading">
+          <h2 id="mistakes-heading" className="text-[18px] font-semibold tracking-[-0.015em]">
+            Common mistakes
+          </h2>
+          <ul className="mt-4 grid gap-3 md:grid-cols-2">
+            {mistakes.map((m) => (
+              <li key={m.title} className="rounded-xl border p-4">
+                <h3 className="text-[14.5px] font-semibold">{m.title}</h3>
+                <p className="mt-1 text-[14px] text-muted-foreground">{m.body}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     <section id="how" className="mt-12 grid items-start gap-x-12 gap-y-10 border-t pt-10 md:grid-cols-2">
       <div>
         <h2 className="text-[18px] font-semibold tracking-[-0.015em]">{stepsTitle}</h2>
@@ -274,5 +316,6 @@ export function ToolGuide({
         </dl>
       </div>
     </section>
+    </>
   );
 }

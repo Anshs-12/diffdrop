@@ -39,6 +39,19 @@ export interface ToolContent {
   steps: { title: string; body: string }[];
   /** Short questions and answers (what people search for). */
   faq: { q: string; a: string }[];
+  /** A worked example: real input and the tool's real output (checked by a test). */
+  example?: WorkedExample;
+  /** Mistakes people commonly make with this kind of task. */
+  mistakes?: { title: string; body: string }[];
+}
+
+export interface WorkedExample {
+  intro: string;
+  inputLabel: string;
+  input: string;
+  outputLabel: string;
+  output: string;
+  note?: string;
 }
 
 export type ToolId = Exclude<PageId, 'home' | 'diff-checker' | 'json-diff' | 'guide-compare-json' | 'guide-json-to-csv' | 'about' | 'contact'>;
@@ -104,6 +117,20 @@ export const TOOL_CONTENT: Record<ToolId, ToolContent> = {
       { q: 'Is the output valid YAML?', a: 'Yes. It reads back to exactly the same data in both YAML 1.1 and 1.2 parsers; this is checked on thousands of tricky inputs in our tests.' },
       { q: 'Is my data uploaded?', a: 'No. The conversion runs in this tab.' },
     ],
+    example: {
+      intro: 'A small service config. "yes" and "1.10" are strings in the JSON, so they are quoted in the YAML; otherwise YAML would read them as true and 1.1.',
+      inputLabel: 'json',
+      input: '{"name":"web","replicas":3,"enabled":"yes","version":"1.10","ports":[80,443],"env":{"MODE":"prod","DEBUG":false}}',
+      outputLabel: 'yaml',
+      output: 'name: web\nreplicas: 3\nenabled: "yes"\nversion: "1.10"\nports:\n- 80\n- 443\nenv:\n  MODE: prod\n  DEBUG: false\n',
+    },
+    mistakes: [
+      { title: 'The Norway problem', body: 'In YAML 1.1, unquoted yes, no, on, off (and NO, the country code for Norway) become booleans. Quote them when they are meant as text.' },
+      { title: 'Versions turning into numbers', body: '1.10 unquoted is the number 1.1, and 1.0 becomes 1. Quote version strings.' },
+      { title: 'Tabs for indentation', body: 'YAML forbids tabs for indentation; a single tab makes the file invalid. Use spaces.' },
+      { title: 'A colon inside a value', body: 'An unquoted "key: value: more" starts a new mapping. Quote values that contain ": " or start with characters like @, `, * or &.' },
+      { title: 'Leading zeros', body: 'File modes like 0755 are read as octal numbers in YAML 1.1. Quote them to keep the exact text.' },
+    ],
   },
   'json-viewer': {
     h1: 'JSON viewer',
@@ -117,6 +144,19 @@ export const TOOL_CONTENT: Record<ToolId, ToolContent> = {
       { q: 'How big a file can it open?', a: 'Large ones. Only expanded branches are rendered, so a file with hundreds of thousands of values still opens instantly.' },
       { q: 'What does the path look like?', a: 'JavaScript style: $.users[0].address.city, with ["odd key"] for keys that contain spaces or symbols.' },
       { q: 'Is my JSON sent anywhere?', a: 'No. Everything happens in this tab.' },
+    ],
+    example: {
+      intro: 'Two users; clicking the email of the first and the first-name of the second copies these paths. Keys with a dash need bracket notation.',
+      inputLabel: 'json',
+      input: '{"users":[{"email":"ada@example.com"},{"first-name":"Grace"}]}',
+      outputLabel: 'copied paths',
+      output: '$.users[0].email\n$.users[1]["first-name"]',
+    },
+    mistakes: [
+      { title: 'Dot notation for odd keys', body: 'Keys with spaces, dashes or starting with a digit need brackets: $.user["first-name"], not $.user.first-name.' },
+      { title: 'Counting from one', body: 'Arrays are zero-indexed: the first item is [0], the third is [2].' },
+      { title: 'Mixing path styles', body: 'Paths here are JavaScript style ($.a[0].b). jq writes the same path as .a[0].b: drop the $.' },
+      { title: 'Searching with one letter', body: 'Search starts at two characters, so a single letter doesn’t filter the tree.' },
     ],
   },
   base64: {
@@ -221,6 +261,20 @@ export const TOOL_CONTENT: Record<ToolId, ToolContent> = {
       { q: 'What about words like iPhone or NASA?', a: 'Words that already have capitals inside them, all-caps acronyms and URLs are left exactly as written.' },
       { q: 'Which style should I use?', a: 'AP for news and most blogs, Chicago for books and many publishers, APA for psychology and social sciences, MLA for humanities papers.' },
     ],
+    example: {
+      intro: 'One headline, two style guides. Chicago and MLA lowercase every preposition; AP and APA capitalize prepositions of four letters or more, so "From" and "With" change.',
+      inputLabel: 'input',
+      input: 'a guide to working from home with kids',
+      outputLabel: 'Chicago · AP',
+      output: 'A Guide to Working from Home with Kids\nA Guide to Working From Home With Kids',
+    },
+    mistakes: [
+      { title: 'Capitalizing every word', body: 'That is Capitalized Case. Title case keeps short words like "of", "and" and "the" lowercase in the middle of a title.' },
+      { title: 'Lowercasing the first or last word', body: 'Every style capitalizes the first and last word, even "a" or "up": "Where Are You From", not "from".' },
+      { title: 'Lowercasing long prepositions in AP', body: 'AP and APA capitalize any word of four letters or more, so "Between", "Through" and "With" are capitalized there.' },
+      { title: 'Forgetting the word after a colon', body: 'The first word after a colon starts a subtitle and is capitalized: "The End: A Story", not "The End: a Story".' },
+      { title: 'Changing brand names and acronyms', body: 'iPhone, eBay and NASA keep their own capitals. The converter leaves words with inner capitals and all-caps words alone.' },
+    ],
   },
   'word-counter': {
     h1: 'Word counter',
@@ -263,6 +317,19 @@ export const TOOL_CONTENT: Record<ToolId, ToolContent> = {
       { q: 'What is lorem ipsum?', a: 'Scrambled Latin, derived from Cicero’s "De finibus bonorum et malorum" (45 BC), used since the 1500s as placeholder text so a layout can be judged without readable content distracting from it.' },
       { q: 'Why not use real text?', a: 'Readable text draws attention to what it says. Lorem ipsum has a natural-looking spread of word lengths without meaning, so people focus on the design.' },
       { q: 'Is it free to use?', a: 'Yes. Lorem ipsum is public domain and so is everything this generator writes.' },
+    ],
+    example: {
+      intro: 'Eight words, starting with the classic opening, as plain text.',
+      inputLabel: 'settings',
+      input: 'Words: 8\nStart with "Lorem ipsum": on\nHTML: off',
+      outputLabel: 'output',
+      output: 'Lorem ipsum dolor sit amet consectetur adipiscing elit',
+    },
+    mistakes: [
+      { title: 'Shipping placeholder text', body: 'Lorem ipsum left in a live page looks broken. Search the build for "lorem" before every release.' },
+      { title: 'Testing only with lorem ipsum', body: 'Real text has long words, numbers, links and other languages that break layouts in ways Latin filler never will. Test with real content too.' },
+      { title: 'Using it where screen readers go', body: 'Screen readers read the Latin aloud. Keep placeholder text out of alt text, labels and anything assistive tech announces.' },
+      { title: 'Pasting HTML into a text field', body: 'The HTML option wraps paragraphs in <p> tags; pasted into a plain text field, the tags show up as text. Use plain text there.' },
     ],
   },
   'qr-code': {
@@ -307,6 +374,19 @@ export const TOOL_CONTENT: Record<ToolId, ToolContent> = {
       { q: 'How do I make a hard color stop?', a: 'Give two stops the same position, such as red 50% and blue 50%, and the colors meet with a sharp edge instead of blending.' },
       { q: 'Is the gradient an image?', a: 'No, it is pure CSS, so it is sharp at any size and costs nothing to download.' },
     ],
+    example: {
+      intro: 'A left-to-right sunset fade: two stops, 90 degrees.',
+      inputLabel: 'settings',
+      input: 'Type: linear\nAngle: 90°\nStops: #ff7e5f at 0%, #feb47b at 100%',
+      outputLabel: 'css',
+      output: 'background: linear-gradient(90deg, #ff7e5f 0%, #feb47b 100%);',
+    },
+    mistakes: [
+      { title: 'Using background-color', body: 'A gradient is an image, so background-color ignores it. Use background or background-image.' },
+      { title: 'Getting the angle backwards', body: '0deg runs bottom to top and 90deg left to right; angles turn clockwise. "to right" is the same as 90deg.' },
+      { title: 'Expecting a hard edge', body: 'Colors blend between stops. For a sharp line, give two stops the same position: red 50%, blue 50%.' },
+      { title: 'Oval radial gradients', body: 'radial-gradient is an ellipse that follows the box shape unless you say circle.' },
+    ],
   },
   'code-beautifier': {
     h1: 'Code beautifier',
@@ -335,6 +415,20 @@ export const TOOL_CONTENT: Record<ToolId, ToolContent> = {
       { q: 'Which Markdown flavor is supported?', a: 'GitHub-flavored Markdown (GFM): CommonMark plus tables, task lists, strikethrough and autolinks.' },
       { q: 'Is the preview safe with untrusted Markdown?', a: 'Yes. The HTML is sanitized before display, so scripts and event handlers in the Markdown can’t run.' },
       { q: 'Why don’t images from other sites show?', a: 'The page blocks every outside request to keep your text private, and that includes images. They appear normally in the exported HTML.' },
+    ],
+    example: {
+      intro: 'Release notes with a task list and inline code, and the HTML it turns into.',
+      inputLabel: 'markdown',
+      input: '## Release notes\n\n- [x] Faster startup\n- [ ] Dark mode\n\nRun `npm run build` to **ship** it.\n',
+      outputLabel: 'html',
+      output:
+        '<h2>Release notes</h2>\n<ul>\n<li><input checked="" disabled="" type="checkbox"> Faster startup</li>\n<li><input disabled="" type="checkbox"> Dark mode</li>\n</ul>\n<p>Run <code>npm run build</code> to <strong>ship</strong> it.</p>\n',
+    },
+    mistakes: [
+      { title: 'Expecting a newline to break the line', body: 'A single newline joins lines into one paragraph. End a line with two spaces or a backslash, or leave a blank line.' },
+      { title: 'No blank line after a list', body: 'Text right under a list item, without a blank line, becomes part of that item.' },
+      { title: 'Tables without the separator row', body: 'A table needs the | --- | line under the header; without it the pipes show as plain text.' },
+      { title: 'Under-indented nested lists', body: 'Nested items must line up with the parent item’s text: 2 spaces under "- ", 3 under "1. ".' },
     ],
   },
 };
