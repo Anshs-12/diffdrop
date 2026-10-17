@@ -27,7 +27,7 @@ for (const tool of TOOLS) {
     await expect(page.getByRole('heading', { name: 'How it works' })).toBeVisible();
     // Links to every other page
     const tools = page.getByRole('navigation', { name: 'Tools' });
-    await expect(tools.getByRole('link')).toHaveCount(14); // every other page
+    await expect(tools.getByRole('link')).toHaveCount(23); // every other tool and guide
     expect(errors).toEqual([]);
   });
 
@@ -156,7 +156,7 @@ test('sidebar links to every tool on desktop, the menu on mobile', async ({ page
   await page.setViewportSize({ width: 390, height: 800 });
   await expect(sidebar).toBeHidden();
   await page.getByRole('button', { name: 'Menu' }).click();
-  await expect(page.getByRole('menuitem')).toHaveCount(15);
+  await expect(page.getByRole('menuitem')).toHaveCount(28); // 24 tools and guides, home, why free, contact, GitHub
   await page.getByRole('menuitem', { name: /Diff checker/ }).click();
   await expect(page).toHaveURL(/\/diff-checker\/$/);
 });

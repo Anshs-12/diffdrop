@@ -25,7 +25,7 @@ export default defineConfig({
     // Timing tests run alone so parallel tests don't skew the numbers
     { name: 'perf', testMatch: /perf\.spec\.ts/, fullyParallel: false, use: chrome },
     // Safari's engine: JSON tools there use the fallback number parsing (needs `npx playwright install webkit`)
-    { name: 'safari', testMatch: /(tools|devtools)\.spec\.ts/, use: { ...devices['Desktop Safari'], viewport: { width: 1440, height: 900 } } },
+    { name: 'safari', testMatch: /(tools|devtools|texttools|site)\.spec\.ts/, use: { ...devices['Desktop Safari'], viewport: { width: 1440, height: 900 } } },
   ],
   webServer: {
     command: `npm run build && npx vite preview --port ${PORT} --strictPort`,

@@ -41,7 +41,7 @@ export interface ToolContent {
   faq: { q: string; a: string }[];
 }
 
-export type ToolId = Exclude<PageId, 'home' | 'diff-checker' | 'json-diff' | 'guide-compare-json' | 'guide-json-to-csv'>;
+export type ToolId = Exclude<PageId, 'home' | 'diff-checker' | 'json-diff' | 'guide-compare-json' | 'guide-json-to-csv' | 'about' | 'contact'>;
 
 export const TOOL_CONTENT: Record<ToolId, ToolContent> = {
   'json-formatter': {
@@ -192,6 +192,149 @@ export const TOOL_CONTENT: Record<ToolId, ToolContent> = {
       { q: 'Why do spaces become + sometimes and %20 other times?', a: 'HTML forms send data as application/x-www-form-urlencoded, where a space is +. Everywhere else in a URL a space is %20. Pick Form or Component to match what you’re working with.' },
       { q: 'Why does decoding fail?', a: 'A % must be followed by two hex digits, and the bytes must form valid UTF-8. The error says exactly which escape is wrong.' },
       { q: 'Is anything sent anywhere?', a: 'No. Encoding, decoding and parsing all happen in this tab.' },
+    ],
+  },
+  'case-converter': {
+    h1: 'Case converter',
+    lede: 'Change text to UPPER CASE, lower case, Sentence case or Title Case, or to camelCase, snake_case and kebab-case for code. Every format at once, as you type.',
+    steps: [
+      { title: 'Paste your text', body: 'Any length. Each line is converted separately for code cases, so a list of names converts one per line.' },
+      { title: 'Pick a case', body: 'Click a case to show it in the output, or scan the preview of every case at once.' },
+      { title: 'Copy the result', body: 'Copy or download. Accented letters and other alphabets convert correctly.' },
+    ],
+    faq: [
+      { q: 'What is the difference between Title Case and Capitalized Case?', a: 'Capitalized Case capitalizes every word. Title Case follows style-guide rules and keeps short words like "of", "and" and "the" lowercase unless they start or end the title. For AP, APA or MLA rules, use the title case converter.' },
+      { q: 'How does it split words for camelCase and snake_case?', a: 'At spaces, punctuation and existing case changes, so "parseHTTPRequest", "parse http request" and "parse-http-request" all become parse_http_request.' },
+      { q: 'Is my text uploaded?', a: 'No. Conversion happens in this tab.' },
+    ],
+  },
+  'title-case': {
+    h1: 'Title case converter',
+    lede: 'Capitalize titles and headlines correctly in AP, Chicago, APA, MLA or New York Times style. Acronyms, brand names and URLs stay as you wrote them.',
+    steps: [
+      { title: 'Paste your titles', body: 'One title or many, one per line.' },
+      { title: 'Choose a style guide', body: 'Each style lowercases different minor words. The rule is shown under the buttons.' },
+      { title: 'Copy the result', body: 'First and last words, and the word after a colon, are always capitalized.' },
+    ],
+    faq: [
+      { q: 'Which words stay lowercase in a title?', a: 'Usually articles (a, an, the), coordinating conjunctions (and, but, or, nor) and prepositions. Chicago and MLA lowercase prepositions of any length; AP and APA capitalize words of four letters or more, so "Between" and "With" are capitalized.' },
+      { q: 'What about words like iPhone or NASA?', a: 'Words that already have capitals inside them, all-caps acronyms and URLs are left exactly as written.' },
+      { q: 'Which style should I use?', a: 'AP for news and most blogs, Chicago for books and many publishers, APA for psychology and social sciences, MLA for humanities papers.' },
+    ],
+  },
+  'word-counter': {
+    h1: 'Word counter',
+    lede: 'Count words, characters, sentences and paragraphs as you type, with reading and speaking time and your most-used words. Private: your text stays in your browser.',
+    steps: [
+      { title: 'Type or paste', body: 'Counts update on every keystroke, even for very long documents.' },
+      { title: 'Check the limits', body: 'Characters with and without spaces, for essays, tweets, meta descriptions and form limits.' },
+      { title: 'Spot repetition', body: 'The top-words list (common words like "the" left out) shows what you lean on.' },
+    ],
+    faq: [
+      { q: 'How are words counted?', a: 'A word is a run of letters or digits, which may include apostrophes and hyphens: "don’t" and "well-known" are one word each. Numbers count as words, like in Word and Google Docs.' },
+      { q: 'How is reading time worked out?', a: 'At 238 words a minute, the average adult silent reading speed found by a large 2019 review; speaking time uses 150 words a minute.' },
+      { q: 'Do emoji count as one character?', a: 'Yes. Characters are counted as you see them, so an emoji or an accented letter counts once.' },
+      { q: 'Is my text saved or uploaded?', a: 'Neither. It stays in this tab and is gone when you close it.' },
+    ],
+  },
+  'password-generator': {
+    h1: 'Password generator',
+    lede: 'Create strong, random passwords using your browser’s cryptographic random number generator. Choose the length and characters and see how strong the result is.',
+    steps: [
+      { title: 'Set length and characters', body: 'Longer is stronger: 16 or more characters with all four sets is a good default.' },
+      { title: 'Check the strength', body: 'Entropy in bits and a rough time to crack it by brute force.' },
+      { title: 'Copy it', body: 'Generate as many as you like. Nothing is stored or sent anywhere.' },
+    ],
+    faq: [
+      { q: 'Is it safe to generate passwords online?', a: 'This page creates them with crypto.getRandomValues in your browser and is blocked from making network requests, so the password never leaves your device. Store it in a password manager.' },
+      { q: 'How long should a password be?', a: 'At least 12 characters; 16 or more for important accounts. Each extra character multiplies the work for an attacker far more than adding symbols does.' },
+      { q: 'What does "exclude ambiguous characters" do?', a: 'Leaves out characters that look alike, such as I, l, 1, O and 0, which helps when a password has to be read or typed by hand.' },
+    ],
+  },
+  'lorem-ipsum': {
+    h1: 'Lorem ipsum generator',
+    lede: 'Generate lorem ipsum placeholder text by paragraphs, sentences or words, as plain text or HTML. Starts with the classic "Lorem ipsum dolor sit amet" if you like.',
+    steps: [
+      { title: 'Choose how much', body: 'A number of paragraphs, sentences or words.' },
+      { title: 'Pick the format', body: 'Plain text, or HTML with each paragraph in <p> tags.' },
+      { title: 'Copy it', body: 'Regenerate for different text; the length stays the same.' },
+    ],
+    faq: [
+      { q: 'What is lorem ipsum?', a: 'Scrambled Latin, derived from Cicero’s "De finibus bonorum et malorum" (45 BC), used since the 1500s as placeholder text so a layout can be judged without readable content distracting from it.' },
+      { q: 'Why not use real text?', a: 'Readable text draws attention to what it says. Lorem ipsum has a natural-looking spread of word lengths without meaning, so people focus on the design.' },
+      { q: 'Is it free to use?', a: 'Yes. Lorem ipsum is public domain and so is everything this generator writes.' },
+    ],
+  },
+  'qr-code': {
+    h1: 'QR code generator',
+    lede: 'Make QR codes for links, text, Wi-Fi, email or phone numbers. Choose colors, size and error correction, then download a PNG or SVG. Free, with no sign-up and no expiry.',
+    steps: [
+      { title: 'Pick what to encode', body: 'A link or text, Wi-Fi details (so phones join with a scan), an email or a phone number.' },
+      { title: 'Style it', body: 'Colors, size, quiet-zone margin and error correction. Keep strong contrast so every phone can scan it.' },
+      { title: 'Download', body: 'SVG for print at any size, PNG for screens and documents.' },
+    ],
+    faq: [
+      { q: 'Do these QR codes expire?', a: 'Never. The QR code contains your data directly, not a redirect through someone’s server, so it works for as long as the link or text inside it does.' },
+      { q: 'Are scans tracked?', a: 'No. There is no short link or tracking server in between; a scan goes straight to what you encoded.' },
+      { q: 'What is error correction?', a: 'Extra data that lets a scanner read a damaged or partly covered code: L recovers about 7%, M 15%, Q 25% and H 30%. Higher levels make the code denser.' },
+      { q: 'How much can a QR code hold?', a: 'Up to about 2,900 bytes at level L: plenty for links and Wi-Fi details. Shorter content gives a simpler, easier-to-scan code.' },
+    ],
+  },
+  'color-converter': {
+    h1: 'Color converter',
+    lede: 'Convert a color between HEX, RGB, HSL, HSV, OKLCH and CMYK, check its contrast against white and black, and get tints, shades and harmonious palettes.',
+    steps: [
+      { title: 'Enter or pick a color', body: 'Type any CSS color (#ff7f50, rgb(), hsl(), oklch() or a name like coral), or use the picker.' },
+      { title: 'Copy any format', body: 'Every notation updates together, ready to paste into CSS or a design tool.' },
+      { title: 'Build a palette', body: 'Tints and shades, plus complementary, analogous and triadic colors. Click any swatch to use it.' },
+    ],
+    faq: [
+      { q: 'How do I convert HEX to RGB?', a: 'Split the six digits into pairs and read each as a hexadecimal number: #ff7f50 is ff = 255, 7f = 127, 50 = 80, so rgb(255 127 80). Paste it above to get every format at once.' },
+      { q: 'What contrast ratio do I need?', a: 'WCAG asks for at least 4.5:1 for normal text (AA) and 3:1 for large text; 7:1 meets AAA. The ratios against white and black are shown for every color.' },
+      { q: 'What is OKLCH?', a: 'A modern CSS color space where equal steps in lightness look equal to the eye, which makes it better than HSL for building consistent palettes.' },
+    ],
+  },
+  'css-gradient': {
+    h1: 'CSS gradient generator',
+    lede: 'Design linear, radial and conic CSS gradients visually. Add color stops, drag positions, set the angle and copy the CSS. Works in every modern browser.',
+    steps: [
+      { title: 'Choose the type', body: 'Linear runs along an angle, radial spreads from the center, conic sweeps around it.' },
+      { title: 'Edit the stops', body: 'Pick each color and its position; add or remove stops as you need.' },
+      { title: 'Copy the CSS', body: 'A ready background property, previewed full size above.' },
+    ],
+    faq: [
+      { q: 'Do CSS gradients need vendor prefixes?', a: 'No. linear-gradient, radial-gradient and conic-gradient work unprefixed in every current browser.' },
+      { q: 'How do I make a hard color stop?', a: 'Give two stops the same position, such as red 50% and blue 50%, and the colors meet with a sharp edge instead of blending.' },
+      { q: 'Is the gradient an image?', a: 'No, it is pure CSS, so it is sharp at any size and costs nothing to download.' },
+    ],
+  },
+  'code-beautifier': {
+    h1: 'Code beautifier',
+    lede: 'Format messy or minified code in Python, Java, C, C++, C#, Go, PHP, JavaScript, TypeScript, Lua and Shell, plus SQL, HTML, CSS, JSON and YAML. Each language uses its own standard formatter.',
+    steps: [
+      { title: 'Paste your code', body: 'The language is detected automatically; pick it from the list if the guess is wrong.' },
+      { title: 'Set the style', body: '“Default” follows each language’s convention (4 spaces for Python and Java, tabs for Go); or choose 2 spaces, 4 spaces or tabs, and the line width.' },
+      { title: 'Copy or download', body: 'The formatted code updates as you type. Syntax errors are reported instead of breaking your code.' },
+    ],
+    faq: [
+      { q: 'Which formatters are used?', a: 'The standard one for each language: Ruff (Black-compatible) for Python, clang-format for C, C++, Java and C#, gofmt for Go, Mago for PHP, StyLua for Lua, shfmt for shell scripts and Prettier for JavaScript, TypeScript, HTML, CSS, JSON, YAML and Markdown.' },
+      { q: 'Is it the same as running the formatter locally?', a: 'Yes. These are the real formatters compiled to WebAssembly, so the output matches what you get on your machine with the same settings.' },
+      { q: 'What about Rust, Kotlin, Swift or Ruby?', a: 'Their formatters can’t run in a browser yet. They’ll be added as browser builds become available.' },
+      { q: 'Is my code uploaded?', a: 'No. Formatting happens in this tab, so it’s safe for private and proprietary code.' },
+    ],
+  },
+  'markdown-preview': {
+    h1: 'Markdown preview',
+    lede: 'Write Markdown and see it rendered live, GitHub-flavored: headings, tables, task lists, code blocks and links. Copy or download the HTML. Private, in your browser.',
+    steps: [
+      { title: 'Write or paste Markdown', body: 'A README, notes or docs. The preview updates as you type.' },
+      { title: 'Check the result', body: 'GitHub-flavored Markdown: tables, task lists, strikethrough and fenced code all render.' },
+      { title: 'Export', body: 'Copy the HTML, or download a standalone HTML page.' },
+    ],
+    faq: [
+      { q: 'Which Markdown flavor is supported?', a: 'GitHub-flavored Markdown (GFM): CommonMark plus tables, task lists, strikethrough and autolinks.' },
+      { q: 'Is the preview safe with untrusted Markdown?', a: 'Yes. The HTML is sanitized before display, so scripts and event handlers in the Markdown can’t run.' },
+      { q: 'Why don’t images from other sites show?', a: 'The page blocks every outside request to keep your text private, and that includes images. They appear normally in the exported HTML.' },
     ],
   },
 };

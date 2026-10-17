@@ -1,224 +1,188 @@
-import React from 'react';
-import { ArrowDown, ArrowRight, Check, Infinity as InfinityIcon, Lightbulb, Scale, Server } from 'lucide-react';
-import { pageById, REPO_URL } from '@/site';
+import { useMemo, useState } from 'react';
+import { ArrowRight, Lightbulb, Lock, Scale, Search, UserX } from 'lucide-react';
+import { pageById, REPO_URL, type PageId } from '@/site';
+import { searchPages } from '@/lib/search';
 import { useTheme } from '@/lib/theme';
-import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import SiteHeader, { type HeaderSection } from '@/components/SiteHeader';
-import { Footer, Privacy, SectionTitle } from '@/components/Landing';
-import { TOOL_GROUPS, TOOL_ICONS, TOOL_ONLY_GROUPS, type ToolPageId } from '@/components/ToolShell';
+import SiteHeader from '@/components/SiteHeader';
+import { Footer } from '@/components/Landing';
+import { GROUP_COLORS, Sidebar, TOOL_GROUPS, TOOL_ICONS, TOOL_ONLY_GROUPS, groupOf, type ToolPageId } from '@/components/ToolShell';
 
-const SECTIONS: HeaderSection[] = [
-  { id: 'tools', label: 'Tools' },
-  { id: 'guides', label: 'Guides' },
-  { id: 'why', label: 'Why free' },
-  { id: 'privacy', label: 'Privacy' },
-];
-
-/** What each tool card lists under its description. */
 const TOOL_COUNT = TOOL_ONLY_GROUPS.reduce((n, g) => n + g.ids.length, 0);
-const GUIDES = TOOL_GROUPS.find((g) => g.label === 'Guides')!.ids;
+const TOOLS = TOOL_ONLY_GROUPS.flatMap((g) => g.ids.map(pageById));
 
-const POINTS: Partial<Record<ToolPageId, string[]>> = {
-  'diff-checker': ['Line and word level changes', 'Files of 100,000+ lines'],
-  'json-diff': ['Ignores key order and formatting', 'Every changed key and value'],
-  'json-formatter': ['2 or 4 spaces, tabs or minified', 'Sort keys A–Z'],
-  'json-validator': ['Exact line and column of errors', 'Duplicate key warnings'],
-  'json-to-csv': ['Nested objects become columns', 'Opens cleanly in Excel'],
-  'json-to-yaml': ['Clean block-style YAML', 'Quotes only what YAML needs'],
-  'json-viewer': ['Collapsible, searchable tree', 'Click to copy any path'],
-  base64: ['Text, images and files', 'UTF-8 and URL-safe'],
-  'unix-timestamp': ['Seconds to nanoseconds, auto-detected', 'Any time zone, ISO 8601'],
-  'jwt-decoder': ['Header, payload and expiry', 'Verify HS, RS, PS and ES signatures'],
-  'regex-tester': ['Live matches and capture groups', 'Replace preview, safe from hangs'],
-  'url-encoder': ['Component, full URL or form style', 'Any URL split into its parts'],
-};
+/** The most-used tools, shown large at the top. */
+const POPULAR: ToolPageId[] = ['diff-checker', 'json-formatter', 'base64', 'qr-code', 'word-counter', 'password-generator'];
 
-const IconTile: React.FC<{ Icon: typeof Check }> = ({ Icon }) => (
-  <span className="grid size-10 shrink-0 place-items-center rounded-xl border bg-background">
-    <Icon className="size-[18px]" aria-hidden="true" />
-  </span>
-);
+const CATEGORIES = ['All', ...TOOL_ONLY_GROUPS.map((g) => g.label)];
 
-const cardClass = 'group flex flex-col rounded-2xl border bg-card p-5 transition-colors hover:border-foreground/25';
+function IconTile({ id, size = 'md' }: { id: PageId; size?: 'md' | 'lg' }) {
+  const Icon = TOOL_ICONS[id as ToolPageId];
+  const color = GROUP_COLORS[groupOf(id) ?? 'Guides']!;
+  return (
+    <span className={cn('grid shrink-0 place-items-center rounded-xl', color.tile, size === 'lg' ? 'size-12' : 'size-10')}>
+      <Icon className={cn(color.text, size === 'lg' ? 'size-6' : 'size-5')} aria-hidden="true" />
+    </span>
+  );
+}
 
-const ToolCard: React.FC<{ id: ToolPageId; group: string }> = ({ id, group }) => {
+/** A tool card: colored icon, name, one line on what it does. */
+function ToolCard({ id }: { id: PageId }) {
   const page = pageById(id);
   return (
-    <a href={page.path} className={cardClass}>
-      <div className="flex items-start justify-between gap-3">
-        <IconTile Icon={TOOL_ICONS[id]} />
-        <span className="font-mono text-[11px] text-faint">{group.toLowerCase()}</span>
-      </div>
-      <h3 className="mt-4 text-[16.5px] font-semibold tracking-[-0.015em]">{page.name}</h3>
-      <p className="mt-1 text-[14px] text-muted-foreground">{page.blurb}</p>
-      <ul className="mt-3 space-y-1 text-[13.5px] text-muted-foreground">
-        {(POINTS[id] ?? []).map((p) => (
-          <li key={p} className="flex items-start gap-2">
-            <Check className="mt-[3px] size-3.5 shrink-0 text-add" aria-hidden="true" />
-            {p}
-          </li>
-        ))}
-      </ul>
-      <span className="mt-auto inline-flex items-center gap-1.5 pt-5 text-[13.5px] font-medium">
-        Open
-        <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+    <a
+      href={page.path}
+      className="group flex items-start gap-3 rounded-2xl border bg-card p-4 transition-all sm:flex-col sm:p-5 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)]"
+    >
+      <IconTile id={id} />
+      <span>
+        <span className="block text-[16px] font-semibold tracking-[-0.01em]">{page.name}</span>
+        <span className="mt-1 block text-[14px] leading-snug text-muted-foreground">{page.blurb}</span>
       </span>
     </a>
   );
-};
+}
 
-const REASONS = [
-  {
-    Icon: Server,
-    title: 'It runs on your device',
-    body: 'Every tool works inside your browser. There are no servers doing the work, so there is no bill to pass on to you.',
-  },
-  {
-    Icon: InfinityIcon,
-    title: 'No limits, no account',
-    body: 'No sign-up, no daily caps, no "pro" tier. Every feature works as often as you like, on files as big as your browser can hold.',
-  },
-  {
-    Icon: Scale,
-    title: 'Open source',
-    body: (
-      <>
-        MIT licensed. Read the code, run it yourself, or send a fix{' '}
-        <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className="underline decoration-border underline-offset-4 hover:text-foreground">
-          on GitHub
-        </a>
-        .
-      </>
-    ),
-  },
+/** A larger card for the popular tools. */
+function PopularCard({ id }: { id: ToolPageId }) {
+  const page = pageById(id);
+  return (
+    <a
+      href={page.path}
+      className="group flex items-center gap-4 rounded-2xl border bg-card p-5 transition-all hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)]"
+    >
+      <IconTile id={id} size="lg" />
+      <span className="min-w-0 flex-1">
+        <span className="block text-[17px] font-semibold tracking-[-0.015em]">{page.name}</span>
+        <span className="mt-0.5 block text-[14px] leading-snug text-muted-foreground">{page.blurb}</span>
+      </span>
+      <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+    </a>
+  );
+}
+
+const PROMISES = [
+  { Icon: Lock, title: 'Nothing is uploaded', body: 'Every tool runs in your browser. Your data never leaves this tab.' },
+  { Icon: UserX, title: 'No sign-up, no limits', body: 'No accounts, no daily caps, no "pro" plan. Use anything as often as you like.' },
+  { Icon: Scale, title: 'Open source', body: 'MIT licensed. Read the code, run it yourself, or help improve it.' },
 ];
 
-/** The home page: every tool, why it's free, and how it stays private. */
+/** The home page: sidebar of tools; popular tools; every tool by category. */
 export default function HomeApp() {
-  const { choice: theme, setChoice: setTheme } = useTheme();
+  const { resolved, setChoice: setTheme } = useTheme();
+  const [category, setCategory] = useState('All');
+  const [query, setQuery] = useState('');
+
+  const shown = useMemo(() => {
+    const inCategory = category === 'All' ? TOOLS : TOOL_GROUPS.find((g) => g.label === category)!.ids.map(pageById);
+    return query.trim() ? searchPages(query, inCategory) : inCategory;
+  }, [category, query]);
+
   return (
     <TooltipProvider delayDuration={300}>
-      <SiteHeader current="home" sections={SECTIONS} theme={theme} onThemeChange={setTheme} />
-      <main>
-        <section id="top" className="py-20 sm:py-28">
-          <div className="page flex flex-col items-center text-center">
-            <span className="inline-flex h-7 items-center gap-2 rounded-full border px-3 font-mono text-xs text-muted-foreground">
-              <span className="live-dot" aria-hidden="true" />
-              runs entirely in your browser
-            </span>
-            <h1 className="mt-7 text-[clamp(40px,7vw,80px)] leading-[1.02] font-semibold tracking-[-0.045em]">
-              Developer tools they paywall.
-              <br />
-              <span className="mt-[0.14em] inline-flex flex-wrap justify-center gap-x-[0.24em] gap-y-[0.1em]">
-                <span className="inline-block rounded-[0.14em] bg-add-bg px-[0.16em] pb-[0.03em] leading-[1.02] text-add">Free.</span>
-                <a
-                  href={REPO_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block rounded-[0.14em] bg-add-bg px-[0.16em] pb-[0.03em] leading-[1.02] text-add transition-opacity hover:opacity-80"
-                >
+      <SiteHeader current="home" app resolvedTheme={resolved} onThemeChange={setTheme} />
+      <div className="page-wide tool-shell">
+        <Sidebar current="home" />
+        <main id="top" className="min-w-0 pt-10 pb-16 lg:pl-10">
+          <section className="text-center lg:pt-4">
+            <h1 className="text-[clamp(30px,4.6vw,50px)] leading-[1.08] font-semibold tracking-[-0.04em]">
+              Every developer tool you need, in one place.
+              <span className="mt-[0.18em] flex flex-wrap justify-center gap-x-[0.22em] gap-y-[0.1em]">
+                <span className="inline-block rounded-[0.14em] bg-add-bg px-[0.14em] pb-[0.04em] text-add">Free.</span>
+                <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className="inline-block rounded-[0.14em] bg-add-bg px-[0.14em] pb-[0.04em] text-add hover:opacity-80">
                   Open source.
                 </a>
               </span>
             </h1>
-            <p className="mt-6 max-w-[54ch] text-[clamp(17px,2vw,19px)] text-muted-foreground">
-              Compare text and JSON, format and convert JSON, decode Base64 and JWTs, convert timestamps and test regexes. No
-              account, no limits, and nothing you paste ever leaves your browser.
+            <p className="mx-auto mt-4 max-w-[56ch] text-[16.5px] text-muted-foreground">
+              {TOOL_COUNT} tools for JSON, text, encoding, colors and code. No sign-up, and nothing leaves your browser.
             </p>
-            <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-              <Button asChild size="lg" className="h-11 rounded-full px-6">
-                <a href="#tools">
-                  Browse the tools <ArrowDown />
-                </a>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="h-11 rounded-full px-6">
-                <a href="/diff-checker/">Open the diff checker</a>
-              </Button>
-            </div>
-            <ul className="mt-10 flex flex-wrap justify-center gap-x-6 gap-y-2 font-mono text-[12.5px] text-muted-foreground">
-              {[`${TOOL_COUNT} tools`, 'unlimited', 'no account', 'nothing uploaded'].map((label) => (
-                <li key={label} className="inline-flex items-center gap-1.5">
-                  <Check className="size-3.5 text-add" aria-hidden="true" />
-                  {label}
-                </li>
-              ))}
-              <li className="inline-flex items-center gap-1.5">
-                <Check className="size-3.5 text-add" aria-hidden="true" />
-                <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className="underline decoration-border underline-offset-4 hover:text-foreground hover:decoration-foreground">
-                  open source
-                </a>
-              </li>
-            </ul>
-          </div>
-        </section>
+          </section>
 
-        <section id="tools" className="scroll-mt-16 border-t py-20 sm:py-24">
-          <div className="page">
-            <SectionTitle eyebrow="tools" title="Pick a tool.">
-              Each one runs entirely in this tab: nothing to install, nothing uploaded.
-            </SectionTitle>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {TOOL_ONLY_GROUPS.flatMap((g) => g.ids.map((id) => <ToolCard key={id} id={id} group={g.label} />))}
-              <a href={`${REPO_URL}/issues`} target="_blank" rel="noopener noreferrer" className={`${cardClass} border-dashed bg-transparent`}>
-                <IconTile Icon={Lightbulb} />
-                <h3 className="mt-4 text-[16.5px] font-semibold tracking-[-0.015em]">Missing a tool?</h3>
-                <p className="mt-1 text-[14px] text-muted-foreground">
-                  Tell us what you'd use. New tools follow the same rules: free, open source, nothing uploaded.
-                </p>
-                <span className="mt-auto inline-flex items-center gap-1.5 pt-5 text-[13.5px] font-medium">
-                  Suggest a tool
-                  <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-                </span>
-              </a>
-            </div>
-          </div>
-        </section>
-
-        <section id="guides" className="scroll-mt-16 border-t py-20 sm:py-24">
-          <div className="page">
-            <SectionTitle eyebrow="guides" title="Do it right the first time.">
-              Short, practical guides to the jobs these tools are for.
-            </SectionTitle>
-            <div className="grid gap-4 md:grid-cols-2">
-              {GUIDES.map((id) => {
-                const page = pageById(id);
-                return (
-                  <a key={id} href={page.path} className={cardClass}>
-                    <IconTile Icon={TOOL_ICONS[id]} />
-                    <h3 className="mt-4 text-[18px] font-semibold tracking-[-0.015em]">{page.title}</h3>
-                    <p className="mt-1.5 text-[14.5px] text-muted-foreground">{page.description}</p>
-                    <span className="mt-auto inline-flex items-center gap-1.5 pt-5 text-[13.5px] font-medium">
-                      Read the guide
-                      <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-                    </span>
-                  </a>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        <section id="why" className="border-t py-20 sm:py-28">
-          <div className="page">
-            <SectionTitle eyebrow="why it's free" title="No servers, so no bill to pass on.">
-              Other sites charge because their servers do the work. Here your browser does, so everything is free, with no
-              catch.
-            </SectionTitle>
-            <div className="grid gap-4 md:grid-cols-3">
-              {REASONS.map(({ Icon, title, body }) => (
-                <div key={title} className="rounded-2xl border p-6">
-                  <IconTile Icon={Icon} />
-                  <h3 className="mt-4 text-[17px] font-semibold tracking-[-0.015em]">{title}</h3>
-                  <p className="mt-2 text-[15px] text-muted-foreground">{body}</p>
-                </div>
+          <section className="mt-10" aria-labelledby="popular-heading">
+            <h2 id="popular-heading" className="mb-3 text-[15px] font-semibold">
+              Popular tools
+            </h2>
+            <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+              {POPULAR.map((id) => (
+                <PopularCard key={id} id={id} />
               ))}
             </div>
-          </div>
-        </section>
+          </section>
 
-        <Privacy />
-      </main>
+          <section id="tools" className="mt-12 scroll-mt-20" aria-labelledby="all-heading">
+            <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-3">
+              <h2 id="all-heading" className="text-[15px] font-semibold">
+                All tools
+              </h2>
+              <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Categories">
+                {CATEGORIES.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    role="tab"
+                    aria-selected={category === c}
+                    onClick={() => setCategory(c)}
+                    className={cn(
+                      'h-8 rounded-full border px-3.5 text-[13.5px] transition-colors',
+                      category === c ? 'border-foreground bg-foreground text-background' : 'bg-card text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+              <label className="flex h-9 w-full items-center gap-2 rounded-lg border bg-card px-3 focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 sm:ml-auto sm:w-60">
+                <Search className="size-4 text-muted-foreground" aria-hidden="true" />
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Filter tools"
+                  aria-label="Filter tools"
+                  spellCheck={false}
+                  autoComplete="off"
+                  className="min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-faint"
+                />
+              </label>
+            </div>
+            {shown.length ? (
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" role="tabpanel" aria-label={`${category} tools`}>
+                {shown.map((p) => (
+                  <ToolCard key={p.id} id={p.id} />
+                ))}
+              </div>
+            ) : (
+              <p className="py-10 text-center text-muted-foreground">
+                No tool matches "{query}".{' '}
+                <a href={`${REPO_URL}/issues`} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
+                  Suggest it
+                </a>
+                ?
+              </p>
+            )}
+          </section>
+
+          <section className="mt-12 grid gap-3 md:grid-cols-3" aria-label="Why diffdrop">
+            {PROMISES.map(({ Icon, title, body }) => (
+              <div key={title} className="rounded-2xl border p-5">
+                <Icon className="size-5 text-add" aria-hidden="true" />
+                <h3 className="mt-3 text-[15px] font-semibold">{title}</h3>
+                <p className="mt-1 text-[14px] text-muted-foreground">{body}</p>
+              </div>
+            ))}
+          </section>
+          <p className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[14px]">
+            <a href="/about/" className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+              About diffdrop
+            </a>
+            <a href={`${REPO_URL}/issues`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+              <Lightbulb className="size-3.5" aria-hidden="true" /> Suggest a tool
+            </a>
+          </p>
+        </main>
+      </div>
       <Footer current="home" />
     </TooltipProvider>
   );

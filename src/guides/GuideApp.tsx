@@ -7,11 +7,11 @@ import { GUIDES, type GuideId } from './content';
 
 /** A guide page: sidebar, title, then the article. */
 export default function GuideApp({ page }: { page: GuideId }) {
-  const { choice: theme, setChoice: setTheme } = useTheme();
+  const { resolved, setChoice: setTheme } = useTheme();
   const guide = GUIDES[page];
   return (
     <TooltipProvider delayDuration={300}>
-      <SiteHeader current={page} sections={[]} app theme={theme} onThemeChange={setTheme} />
+      <SiteHeader current={page} app resolvedTheme={resolved} onThemeChange={setTheme} />
       <ToolShell
         current={page}
         title={guide.h1}

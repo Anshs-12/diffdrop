@@ -110,11 +110,18 @@ test.describe('diffdrop', () => {
     await expect(page.getByText('no matches')).toBeVisible();
   });
 
-  test('remembers the chosen theme', async ({ page }) => {
+  test('one switch flips the theme, remembers it, and goes back to following the system', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'light' });
     await page.goto('/diff-checker/');
-    await page.getByRole('radio', { name: 'Dark' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await page.getByRole('button', { name: 'Switch to dark theme' }).click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    // Back to light, which is what the system wants: it follows the system again
+    await page.getByRole('button', { name: 'Switch to light theme' }).click();
+    expect(await page.evaluate(() => localStorage.getItem('diffdrop-theme'))).toBeNull();
+    await page.emulateMedia({ colorScheme: 'dark' });
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   });
 });

@@ -19,18 +19,28 @@ const TOOLS = {
   'jwt-decoder': lazy(() => import('./JwtTool')),
   'regex-tester': lazy(() => import('./RegexTool')),
   'url-encoder': lazy(() => import('./UrlTool')),
+  'case-converter': lazy(() => import('./CaseTool')),
+  'title-case': lazy(() => import('./TitleCaseTool')),
+  'word-counter': lazy(() => import('./WordCounterTool')),
+  'password-generator': lazy(() => import('./PasswordTool')),
+  'lorem-ipsum': lazy(() => import('./LoremTool')),
+  'qr-code': lazy(() => import('./QrTool')),
+  'color-converter': lazy(() => import('./ColorTool')),
+  'css-gradient': lazy(() => import('./GradientTool')),
+  'code-beautifier': lazy(() => import('./BeautifyTool')),
+  'markdown-preview': lazy(() => import('./MarkdownTool')),
 } satisfies Record<ToolId, unknown>;
 
 /** Layout shared by the tool pages: sidebar, compact heading, the tool, then how-to and FAQ. */
 export default function ToolApp({ page }: { page: PageId }) {
-  const { choice: theme, resolved, setChoice: setTheme } = useTheme();
+  const { resolved, setChoice: setTheme } = useTheme();
   const id = page as ToolId;
   const Tool = TOOLS[id];
   const content = TOOL_CONTENT[id];
 
   return (
     <TooltipProvider delayDuration={300}>
-      <SiteHeader current={page} sections={[]} app theme={theme} onThemeChange={setTheme} />
+      <SiteHeader current={page} app resolvedTheme={resolved} onThemeChange={setTheme} />
       <ToolShell
         current={id}
         title={content.h1}

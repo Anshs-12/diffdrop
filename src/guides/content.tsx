@@ -1,5 +1,7 @@
 import React from 'react';
+import { REPO_URL } from '@/site';
 import ToolLink from './ToolLink';
+import ContactCard from './ContactCard';
 import { GUIDE_META, type GuideId } from './meta';
 
 export type { GuideId } from './meta';
@@ -237,6 +239,78 @@ print("\\n".join(difflib.unified_diff(normalize("old.json"), normalize("new.json
 with open("data.json") as f:
     df = pd.json_normalize(json.load(f))
 df.to_csv("data.csv", index=False, encoding="utf-8-sig")`}</Code>
+      </>
+    ),
+  },
+  'about': {
+    ...GUIDE_META['about'],
+    body: (
+      <>
+        <p>
+          diffdrop is a set of everyday developer tools: a diff checker, JSON tools, encoders and decoders, text and code
+          tools, generators and more. They are free to use, with no account and no usage limits, and the code is open source.
+        </p>
+
+        <details open>
+          <summary>Your data stays on your device</summary>
+          <p>
+            Every tool does its work in your browser. The text you paste, the files you open, and the tokens, passwords and
+            colors you work with are processed in the tab and never sent to a server. Close the tab and they are gone.
+          </p>
+          <p>
+            Files are read locally and never uploaded. Share links in the diff checker keep both texts in the part of the
+            address after #, which browsers never send to any server.
+          </p>
+        </details>
+
+        <details>
+          <summary>How can it be free?</summary>
+          <p>
+            Because the work happens on your device, there are no servers doing it and no per-use cost to recover. The site is
+            a set of static files, so running it costs very little, and every tool stays free with no paid plan.
+          </p>
+        </details>
+
+        <details>
+          <summary>Open source</summary>
+          <p>
+            The code is MIT licensed. You can read it, run your own copy, or contribute a fix or a new tool{' '}
+            <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
+              on GitHub
+            </a>
+            .
+          </p>
+        </details>
+
+        <details>
+          <summary>Get in touch</summary>
+          <p>
+            Questions, bugs or ideas for a new tool are welcome on the <a href="/contact/">contact page</a>.
+          </p>
+        </details>
+      </>
+    ),
+  },
+  contact: {
+    ...GUIDE_META.contact,
+    body: (
+      <>
+        <ContactCard />
+        <h2>Report a bug or suggest a tool</h2>
+        <p>
+          For bugs and tool ideas, a GitHub issue is best: others can see it, add details and follow along. Please include what
+          you did, what you expected and what happened instead.
+        </p>
+        <p>
+          <a href={`${REPO_URL}/issues`} target="_blank" rel="noopener noreferrer">
+            Open an issue on GitHub
+          </a>
+        </p>
+        <h2>No forms</h2>
+        <p>
+          There is no contact form: email goes from your own mail app. What you paste into the tools always stays in your
+          browser; see <a href="/about/">about diffdrop</a>.
+        </p>
       </>
     ),
   },

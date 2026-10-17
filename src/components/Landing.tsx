@@ -16,8 +16,8 @@ import {
   TextSelect,
   WrapText,
 } from 'lucide-react';
-import { CSP_DIRECTIVES } from '@/csp';
-import { PAGES, REPO_URL, type PageId } from '@/site';
+import { pageById, REPO_URL, type PageId } from '@/site';
+import { TOOL_GROUPS } from './ToolShell';
 import { Button } from '@/components/ui/button';
 import { GitHubIcon } from './Icons';
 
@@ -106,7 +106,7 @@ const FEATURES: { Icon: typeof Check; title: string; body: React.ReactNode }[] =
   },
 ];
 
-export const SectionTitle: React.FC<{ eyebrow: string; title: React.ReactNode; children?: React.ReactNode }> = ({
+const SectionTitle: React.FC<{ eyebrow: string; title: React.ReactNode; children?: React.ReactNode }> = ({
   eyebrow,
   title,
   children,
@@ -248,48 +248,6 @@ export const Paywall: React.FC = () => (
 );
 
 // ─────────────────────────────────────────────────────────────
-// Privacy
-// ─────────────────────────────────────────────────────────────
-
-export const Privacy: React.FC = () => (
-  <section id="privacy" className="border-t py-20 sm:py-28">
-    <div className="page grid items-start gap-x-12 gap-y-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-      <div className="md:sticky md:top-24">
-        <p className="font-mono text-[12.5px] text-muted-foreground">privacy</p>
-        <h2 className="mt-2 text-[clamp(30px,4.4vw,44px)] leading-[1.08] font-semibold tracking-[-0.035em]">
-          How it stays private
-        </h2>
-      </div>
-      <div className="max-w-[64ch] space-y-4 text-[16px] text-muted-foreground">
-        <p>
-          There's <span className="em-safe">no backend</span>. Text you paste and files you open are read into memory in
-          this tab and processed on your machine. Close the tab and they're gone. The only thing diffdrop remembers is your
-          theme.
-        </p>
-        <p>
-          You don't have to <span className="em-safe">take that on trust</span>. The page ships with a Content Security
-          Policy that tells your browser to refuse every outgoing request it might try to make:
-        </p>
-        <pre
-          className="overflow-x-auto rounded-xl border bg-muted px-5 py-4 font-mono text-[12.5px] leading-7 text-foreground/80"
-          aria-label="Content Security Policy"
-        >
-          {CSP_DIRECTIVES.map((d) => (
-            <span key={d} className={d.startsWith('connect-src') ? 'csp-hl' : undefined}>
-              {d};{'\n'}
-            </span>
-          ))}
-        </pre>
-        <p className="text-[15px]">
-          Open your browser's network panel while you use it. After the page loads,{' '}
-          <span className="em-safe">it stays empty</span>.
-        </p>
-      </div>
-    </div>
-  </section>
-);
-
-// ─────────────────────────────────────────────────────────────
 // Footer
 // ─────────────────────────────────────────────────────────────
 
@@ -297,12 +255,43 @@ const external = { target: '_blank', rel: 'noopener noreferrer' } as const;
 
 export const Footer: React.FC<{ current: PageId }> = ({ current }) => (
   <footer className="border-t">
-    <div className="page flex flex-wrap items-center gap-x-6 gap-y-4 pt-10 pb-6">
+    <nav className="page grid grid-cols-2 gap-x-6 gap-y-8 pt-12 pb-8 sm:grid-cols-4 lg:grid-cols-8" aria-label="Tools">
+      {TOOL_GROUPS.map((g) => (
+        <div key={g.label}>
+          <p className="mb-2 font-mono text-[11.5px] text-faint">{g.label.toLowerCase()}</p>
+          <ul className="space-y-1.5 text-[13.5px]">
+            {g.ids.map((id) => (
+              <li key={id}>
+                {id === current ? (
+                  <span className="font-medium" aria-current="page">
+                    {pageById(id).name}
+                  </span>
+                ) : (
+                  <a href={pageById(id).path} className="text-muted-foreground hover:text-foreground">
+                    {pageById(id).name}
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </nav>
+    <div className="page flex flex-wrap items-center gap-x-6 gap-y-4 border-t border-dashed py-6">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <span className="text-[17px] font-semibold tracking-[-0.02em]">diffdrop</span>
+        <a href="/" className="text-[17px] font-semibold tracking-[-0.02em]">
+          diffdrop
+        </a>
         <span className="font-mono text-xs text-muted-foreground">free, unlimited, and everything stays in this tab</span>
       </div>
       <nav className="ml-auto flex flex-wrap items-center gap-1" aria-label="Footer">
+        {(['about', 'contact'] as const).map((id) => (
+          <Button key={id} asChild variant="ghost" size="sm" className="font-normal text-muted-foreground">
+            <a href={pageById(id).path} aria-current={current === id ? 'page' : undefined}>
+              {pageById(id).name}
+            </a>
+          </Button>
+        ))}
         <Button asChild variant="ghost" size="sm" className="font-normal text-muted-foreground">
           <a href={REPO_URL} {...external}>
             <GitHubIcon className="size-3.5" /> GitHub
@@ -320,19 +309,5 @@ export const Footer: React.FC<{ current: PageId }> = ({ current }) => (
         </Button>
       </nav>
     </div>
-    <nav className="page flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-dashed py-5 text-[13.5px]" aria-label="Tools">
-      <span className="font-mono text-xs text-faint">tools</span>
-      {PAGES.map((p) =>
-        p.id === current ? (
-          <span key={p.id} className="font-medium" aria-current="page">
-            {p.name}
-          </span>
-        ) : (
-          <a key={p.id} href={p.path} className="text-muted-foreground hover:text-foreground">
-            {p.name}
-          </a>
-        ),
-      )}
-    </nav>
   </footer>
 );

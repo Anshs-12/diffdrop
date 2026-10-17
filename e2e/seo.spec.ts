@@ -42,7 +42,6 @@ test.describe('search and sharing', () => {
     await expect(footer.getByRole('link', { name: 'GitHub' })).toHaveAttribute('target', '_blank');
     await expect(page.getByRole('link', { name: 'diffdrop on GitHub' })).toHaveAttribute('rel', 'noopener noreferrer');
     await expect(page.getByRole('banner').getByRole('link', { name: 'open source', exact: true })).toHaveAttribute('href', /github\.com\/Anshs-12\/diffdrop$/);
-    await expect(page.getByRole('main').getByRole('link', { name: 'open source', exact: true })).toHaveAttribute('href', /github\.com\/Anshs-12\/diffdrop$/);
     await expect(page.getByRole('heading', { level: 1 }).getByRole('link', { name: 'Open source.' })).toHaveAttribute('href', /github\.com\/Anshs-12\/diffdrop$/);
     await expect(page.getByRole('navigation', { name: 'Tools' }).getByRole('link', { name: 'JSON diff' })).toHaveAttribute('href', '/json-diff/');
   });
@@ -50,7 +49,10 @@ test.describe('search and sharing', () => {
   test('home page is a hub with a card for every tool', async ({ page }) => {
     const errors = trackErrors(page);
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Developer tools they paywall.');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Every developer tool you need, in one place.');
+    // Popular tools up top, and the sidebar lists every tool
+    await expect(page.getByRole('heading', { name: 'Popular tools' })).toBeVisible();
+    await expect(page.getByRole('complementary', { name: 'Tools' }).getByRole('link', { name: 'All tools' })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('heading', { level: 1 }).getByRole('link', { name: 'Open source.' })).toHaveAttribute('href', /github\.com\/Anshs-12\/diffdrop$/);
     const tools = page.locator('#tools');
     for (const path of ['/diff-checker/', '/json-diff/', '/json-formatter/', '/json-validator/', '/json-to-csv/', '/json-to-yaml/', '/json-viewer/']) {
@@ -66,8 +68,8 @@ test.describe('search and sharing', () => {
 
   test('home page content is in the static HTML', async ({ request }) => {
     const html = await (await request.get('/')).text();
-    expect(html).toContain('Developer tools they paywall.');
-    for (const name of ['Diff checker', 'JSON formatter', 'JSON viewer', 'How it stays private']) expect(html).toContain(name);
+    expect(html).toContain('Every developer tool you need, in one place.');
+    for (const name of ['Diff checker', 'JSON formatter', 'QR code generator', 'Markdown preview']) expect(html).toContain(name);
   });
 
   for (const [path, h1, how] of [

@@ -145,6 +145,26 @@ export function InputActions({
   );
 }
 
+/** Copy text, with a toast either way. */
+export async function copyText(text: string, what = 'Copied') {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast.success(what);
+  } catch {
+    toast.error('Clipboard unavailable');
+  }
+}
+
+/** Save text or bytes as a file. */
+export function downloadFile(data: BlobPart, fileName: string, mime: string) {
+  const url = URL.createObjectURL(new Blob([data], { type: mime }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
 /** Copy and download buttons for an output. `bom` starts the downloaded file with a UTF-8 byte order mark (for Excel). */
 export function OutputActions({ text, fileName, mime, bom = false }: { text: string; fileName: string; mime: string; bom?: boolean }) {
   return (

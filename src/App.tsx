@@ -69,7 +69,7 @@ function hunkLine(lines: DiffLine[], hunk: Hunk, side: 'leftNum' | 'rightNum'): 
 
 const App: React.FC<{ variant: Variant }> = ({ variant }) => {
   const isJson = variant === 'json';
-  const { choice: theme, resolved: resolvedTheme, setChoice: setTheme } = useTheme();
+  const { resolved: resolvedTheme, setChoice: setTheme } = useTheme();
 
   // Decode shared texts from the URL fragment on first render
   const shared = useMemo(() => (typeof window === 'undefined' ? null : decodeHash(window.location.hash)), []);
@@ -495,7 +495,7 @@ const App: React.FC<{ variant: Variant }> = ({ variant }) => {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <SiteHeader current={isJson ? 'json-diff' : 'diff-checker'} sections={[]} app theme={theme} onThemeChange={setTheme} />
+      <SiteHeader current={isJson ? 'json-diff' : 'diff-checker'} app resolvedTheme={resolvedTheme} onThemeChange={setTheme} />
       <ToolShell
         current={isJson ? 'json-diff' : 'diff-checker'}
         title={DIFF_CONTENT[variant].title}

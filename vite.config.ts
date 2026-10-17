@@ -16,6 +16,23 @@ const FAVICON =
 /** The HTML file that serves a page: "/" → index.html, "/x/" → x/index.html. */
 const htmlFile = (page: Page) => (page.path === '/' ? 'index.html' : `${page.path.slice(1)}index.html`);
 
+/**
+ * `import x from 'file.wasm?inline'` gives the module as a base64 data URL, so
+ * it ships inside its (lazily loaded) script and is never fetched: the page's
+ * Content Security Policy blocks fetches (connect-src 'none').
+ */
+function wasmInline(): Plugin {
+  return {
+    name: 'wasm-inline',
+    enforce: 'pre',
+    load(id) {
+      if (!id.endsWith('.wasm?inline')) return null;
+      const base64 = fs.readFileSync(id.slice(0, -'?inline'.length)).toString('base64');
+      return `export default ${JSON.stringify(`data:application/wasm;base64,${base64}`)};`;
+    },
+  };
+}
+
 /** Only applied to builds — the dev server needs a WebSocket for hot reload. */
 function contentSecurityPolicy(): Plugin {
   return {
@@ -42,8 +59,8 @@ function structuredData(page: Page): HtmlTagDescriptor {
   if (guide) {
     const article = {
       '@context': 'https://schema.org',
-      '@type': 'TechArticle',
-      headline: guide.h1,
+      '@type': { guide: 'TechArticle', about: 'AboutPage', contact: 'ContactPage' }[guide.kind],
+      [guide.kind === 'guide' ? 'headline' : 'name']: guide.h1,
       description: page.description,
       url,
       datePublished: guide.published,
@@ -95,7 +112,7 @@ function headTags(page: Page): HtmlTagDescriptor[] {
     { tag: 'title', children: page.title, injectTo: 'head' },
     meta({ name: 'description', content: page.description }),
     meta({ name: 'color-scheme', content: 'light dark' }),
-    meta({ name: 'theme-color', media: '(prefers-color-scheme: light)', content: '#ffffff' }),
+    meta({ name: 'theme-color', media: '(prefers-color-scheme: light)', content: '#edece6' }),
     meta({ name: 'theme-color', media: '(prefers-color-scheme: dark)', content: '#0a0a0a' }),
     meta({ name: 'referrer', content: 'no-referrer' }),
     ...(page.id === 'home' ? [meta({ name: 'google-site-verification', content: GOOGLE_SITE_VERIFICATION })] : []),
@@ -116,6 +133,8 @@ function headTags(page: Page): HtmlTagDescriptor[] {
     { tag: 'link', attrs: { rel: 'icon', href: FAVICON }, injectTo: 'head' },
     // Applies the saved theme before first paint (plain script from public/)
     { tag: 'script', attrs: { src: '/theme-init.js' }, injectTo: 'head' },
+    // Restores the sidebar's scroll position before the first paint (plain script from public/)
+    { tag: 'script', attrs: { src: '/sidebar-scroll.js' }, injectTo: 'body' },
     structuredData(page),
   ];
 }
@@ -192,7 +211,7 @@ function prerender(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), contentSecurityPolicy(), pages(), prerender()],
+  plugins: [wasmInline(), react(), tailwindcss(), contentSecurityPolicy(), pages(), prerender()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

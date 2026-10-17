@@ -23,7 +23,19 @@ export type PageId =
   | 'regex-tester'
   | 'url-encoder'
   | 'guide-compare-json'
-  | 'guide-json-to-csv';
+  | 'guide-json-to-csv'
+  | 'case-converter'
+  | 'title-case'
+  | 'word-counter'
+  | 'password-generator'
+  | 'lorem-ipsum'
+  | 'qr-code'
+  | 'color-converter'
+  | 'css-gradient'
+  | 'code-beautifier'
+  | 'markdown-preview'
+  | 'about'
+  | 'contact';
 
 export interface Page {
   id: PageId;
@@ -39,6 +51,8 @@ export interface Page {
   blurb: string;
   /** sitemap.xml priority. */
   priority: number;
+  /** Other words people search for (command palette). */
+  keywords?: string[];
 }
 
 export const PAGES: Page[] = [
@@ -192,9 +206,282 @@ export const PAGES: Page[] = [
     blurb: 'Nested objects, arrays, encoding and Excel quirks.',
     priority: 0.6,
   },
+  {
+    id: 'case-converter',
+    path: '/case-converter/',
+    title: 'Case converter - upper, lower, camelCase and more | diffdrop',
+    description:
+      'Convert text to UPPER, lower, Sentence or Title Case, or to camelCase, snake_case, kebab-case and CONSTANT_CASE for code. Free, instant, in your browser.',
+    name: 'Case converter',
+    blurb: 'Change text to upper, lower, title, camel or snake case.',
+    priority: 0.8,
+  },
+  {
+    id: 'title-case',
+    path: '/title-case-converter/',
+    title: 'Title case converter - AP, Chicago, APA, MLA | diffdrop',
+    description:
+      'Capitalize headlines and titles correctly in AP, Chicago, APA, MLA or New York Times style. Keeps acronyms and brand names intact. Free, in your browser.',
+    name: 'Title case',
+    blurb: 'Capitalize titles in AP, Chicago, APA or MLA style.',
+    priority: 0.8,
+  },
+  {
+    id: 'word-counter',
+    path: '/word-counter/',
+    title: 'Word counter - count words, characters, sentences | diffdrop',
+    description:
+      'Count words, characters with and without spaces, sentences and paragraphs as you type, plus reading time and top keywords. Free, private, and no sign-up.',
+    name: 'Word counter',
+    blurb: 'Count words, characters, sentences and reading time.',
+    priority: 0.8,
+  },
+  {
+    id: 'password-generator',
+    path: '/password-generator/',
+    title: 'Password generator - strong, random passwords | diffdrop',
+    description:
+      'Generate strong random passwords with your browser’s secure random generator. Pick the length and characters, see the strength. Free, nothing is stored.',
+    name: 'Password generator',
+    blurb: 'Generate strong random passwords, made in your browser.',
+    priority: 0.8,
+  },
+  {
+    id: 'lorem-ipsum',
+    path: '/lorem-ipsum-generator/',
+    title: 'Lorem ipsum generator - placeholder text | diffdrop',
+    description:
+      'Generate lorem ipsum placeholder text by paragraphs, sentences or words, as plain text or HTML, starting with the classic "Lorem ipsum dolor sit amet".',
+    name: 'Lorem ipsum',
+    blurb: 'Generate placeholder text by paragraph, sentence or word.',
+    priority: 0.7,
+  },
+  {
+    id: 'qr-code',
+    path: '/qr-code-generator/',
+    title: 'QR code generator - free, no sign-up, no tracking | diffdrop',
+    description:
+      'Make QR codes for links, text, Wi-Fi, email or phone numbers. Pick colors and error correction, download PNG or SVG. Free, no expiry, made in your browser.',
+    name: 'QR code generator',
+    blurb: 'Make QR codes for links, Wi-Fi and text; PNG or SVG.',
+    priority: 0.8,
+  },
+  {
+    id: 'color-converter',
+    path: '/color-converter/',
+    title: 'Color converter - HEX, RGB, HSL, OKLCH, palettes | diffdrop',
+    description:
+      'Convert colors between HEX, RGB, HSL, HSV, OKLCH and CMYK, check WCAG contrast, and get tints, shades and harmonies. Pick any color. Free, in browser.',
+    name: 'Color converter',
+    blurb: 'Convert HEX, RGB, HSL; contrast, tints and palettes.',
+    priority: 0.8,
+  },
+  {
+    id: 'css-gradient',
+    path: '/css-gradient-generator/',
+    title: 'CSS gradient generator - linear, radial, conic | diffdrop',
+    description:
+      'Design CSS gradients visually: linear, radial or conic, any number of color stops, angle and positions. Copy the CSS in one click. Free, in your browser.',
+    name: 'CSS gradient',
+    blurb: 'Build linear, radial and conic CSS gradients.',
+    priority: 0.7,
+  },
+  {
+    id: 'code-beautifier',
+    path: '/code-beautifier/',
+    title: 'Code beautifier - Python, Java, C++, Go and more | diffdrop',
+    description:
+      'Format Python, Java, C, C++, C#, Go, PHP, JavaScript, TypeScript, Lua, Shell, SQL, HTML, CSS, JSON and YAML with each language’s own formatter, in browser.',
+    name: 'Code beautifier',
+    blurb: 'Format Python, Java, C++, C#, Go, JS, PHP and more.',
+    priority: 0.8,
+  },
+  {
+    id: 'markdown-preview',
+    path: '/markdown-preview/',
+    title: 'Markdown preview - live editor with GitHub style | diffdrop',
+    description:
+      'Write Markdown and see it rendered live: tables, task lists, code blocks and links, GitHub-flavored. Export HTML. Free, private, works in your browser.',
+    name: 'Markdown preview',
+    blurb: 'Write Markdown and see it rendered live.',
+    priority: 0.7,
+  },
+  {
+    id: 'about',
+    path: '/about/',
+    title: 'About diffdrop - free, open source developer tools',
+    description:
+      'Learn what diffdrop is: free, open source developer tools that run in your browser, so the text, files and data you work with never leave your device.',
+    name: 'About',
+    blurb: 'What diffdrop is and how your data stays on your device.',
+    priority: 0.4,
+  },
+  {
+    id: 'contact',
+    path: '/contact/',
+    title: 'Contact diffdrop - email, bugs and tool ideas',
+    description:
+      'Get in touch with diffdrop: email for questions and feedback, or open an issue on GitHub to report a bug or suggest a new tool. No forms, no tracking.',
+    name: 'Contact',
+    blurb: 'Email, bug reports and tool ideas.',
+    priority: 0.3,
+  },
 ];
 
 export const TOOL_PAGES = PAGES.filter((p) => p.id !== 'home');
+
+/** Search words per page, for the command palette. */
+export const KEYWORDS: Partial<Record<PageId, string[]>> = {
+  'home': [
+    'all tools',
+    'home'
+  ],
+  'diff-checker': [
+    'compare text',
+    'diff',
+    'difference',
+    'code compare',
+    'text compare',
+    'merge'
+  ],
+  'json-diff': [
+    'compare json',
+    'json compare',
+    'json difference'
+  ],
+  'json-formatter': [
+    'beautify json',
+    'pretty print',
+    'minify json',
+    'format json'
+  ],
+  'json-validator': [
+    'validate json',
+    'json lint',
+    'json check',
+    'syntax error'
+  ],
+  'json-to-csv': [
+    'convert json to csv',
+    'excel',
+    'spreadsheet',
+    'export'
+  ],
+  'json-to-yaml': [
+    'convert json to yaml',
+    'yml',
+    'kubernetes',
+    'config'
+  ],
+  'json-viewer': [
+    'json tree',
+    'explore json',
+    'json path'
+  ],
+  'base64': [
+    'base64 decode',
+    'base64 encode',
+    'b64',
+    'data url'
+  ],
+  'unix-timestamp': [
+    'epoch',
+    'unix time',
+    'date converter',
+    'timestamp to date'
+  ],
+  'jwt-decoder': [
+    'jwt',
+    'json web token',
+    'decode token',
+    'bearer'
+  ],
+  'regex-tester': [
+    'regular expression',
+    'regexp',
+    'pattern',
+    'match'
+  ],
+  'url-encoder': [
+    'url decode',
+    'percent encoding',
+    'urlencode',
+    'query string'
+  ],
+  'case-converter': [
+    'uppercase',
+    'lowercase',
+    'camelcase',
+    'snake case',
+    'kebab case',
+    'sentence case'
+  ],
+  'title-case': [
+    'capitalize',
+    'headline',
+    'title capitalization',
+    'ap style',
+    'chicago'
+  ],
+  'word-counter': [
+    'character count',
+    'count words',
+    'letter count',
+    'reading time'
+  ],
+  'password-generator': [
+    'random password',
+    'strong password',
+    'secure password'
+  ],
+  'lorem-ipsum': [
+    'placeholder text',
+    'dummy text',
+    'filler text'
+  ],
+  'qr-code': [
+    'qr',
+    'qr code maker',
+    'wifi qr',
+    'barcode'
+  ],
+  'color-converter': [
+    'hex to rgb',
+    'rgb to hex',
+    'hsl',
+    'color picker',
+    'contrast',
+    'palette',
+    'oklch'
+  ],
+  'css-gradient': [
+    'gradient',
+    'linear-gradient',
+    'background'
+  ],
+  'code-beautifier': ['code formatter', 'prettier', 'python formatter', 'java formatter', 'c++', 'cpp', 'c#', 'csharp', 'golang', 'go fmt', 'php', 'typescript', 'sql formatter', 'clang-format', 'black', 'ruff'],
+  'markdown-preview': [
+    'markdown editor',
+    'md',
+    'readme',
+    'markdown to html'
+  ],
+  'guide-compare-json': [
+    'guide',
+    'how to compare json'
+  ],
+  'guide-json-to-csv': [
+    'guide',
+    'excel csv'
+  ],
+  'about': ['why free', 'privacy', 'open source', 'who makes it'],
+  'contact': [
+    'email',
+    'support',
+    'feedback',
+    'bug report'
+  ]
+};
 
 export function pageById(id: PageId): Page {
   return PAGES.find((p) => p.id === id)!;

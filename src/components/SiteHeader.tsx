@@ -1,9 +1,8 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { ChevronDown, Menu, Monitor, Moon, Sun } from 'lucide-react';
-import type { ThemeChoice } from '@/lib/theme';
+import React, { useEffect, useState } from 'react';
+import { Menu, Moon, Search, Sun } from 'lucide-react';
+import type { ResolvedTheme, ThemeChoice } from '@/lib/theme';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   DropdownMenu,
@@ -14,80 +13,72 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { PAGES, REPO_URL, type PageId } from '@/site';
+import { pageById, REPO_URL, type PageId } from '@/site';
+import CommandPalette from './CommandPalette';
+import { TOOL_GROUPS } from './ToolShell';
 import { GitHubIcon, LogoMark } from './Icons';
 
-export interface HeaderSection {
-  id: string;
-  label: string;
+const SITE_LINKS: PageId[] = ['home', 'about', 'contact'];
+
+/** Whether the OS prefers dark, read live. */
+function systemDark(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
-/** Sections of the diff pages; tool pages pass their own. */
-export const DIFF_SECTIONS: HeaderSection[] = [
-  { id: 'try', label: 'Try it' },
-  { id: 'features', label: 'Features' },
-  { id: 'free', label: 'Why free' },
-  { id: 'privacy', label: 'Privacy' },
-];
-
-const THEMES: { value: ThemeChoice; label: string; Icon: typeof Sun }[] = [
-  { value: 'light', label: 'Light', Icon: Sun },
-  { value: 'system', label: 'Match system', Icon: Monitor },
-  { value: 'dark', label: 'Dark', Icon: Moon },
-];
-
-/** Which section is currently under the header, for highlighting its nav link. */
-function useActiveSection(ids: string[]): string | null {
-  const [active, setActive] = useState<string | null>(null);
-  useEffect(() => {
-    const visible = new Map<string, boolean>();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) visible.set(entry.target.id, entry.isIntersecting);
-        setActive(ids.find((id) => visible.get(id)) ?? null);
-      },
-      // A thin band just below the header decides what counts as "current"
-      { rootMargin: '-80px 0px -70% 0px' },
-    );
-    for (const id of ids) {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    }
-    return () => observer.disconnect();
-  }, [ids]);
-  return active;
-}
-
-
-/** Links to every page; the current one is marked. */
-function ToolItems({ current }: { current: PageId }) {
-  return PAGES.map((p) => (
-    <DropdownMenuItem key={p.id} asChild>
-      <a href={p.path} aria-current={p.id === current ? 'page' : undefined} className="flex-col items-start gap-0.5">
-        <span className={p.id === current ? 'font-semibold' : undefined}>{p.name}</span>
-        <span className="text-xs text-muted-foreground">{p.blurb}</span>
-      </a>
-    </DropdownMenuItem>
-  ));
+/** One sun/moon switch. Follows the system until flipped; flipping back to the system's choice follows it again. */
+function ThemeSwitch({ resolved, onChange }: { resolved: ResolvedTheme; onChange: (choice: ThemeChoice) => void }) {
+  const next: ResolvedTheme = resolved === 'dark' ? 'light' : 'dark';
+  const label = `Switch to ${next} theme`;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon-sm"
+          className="bg-card"
+          aria-label={label}
+          onClick={() => onChange(next === (systemDark() ? 'dark' : 'light') ? 'system' : next)}
+        >
+          {resolved === 'dark' ? <Sun /> : <Moon />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
 }
 
 interface SiteHeaderProps {
-  /** The page being shown, marked in the tools menu. */
+  /** The page being shown, marked in the menu. */
   current: PageId;
-  sections?: HeaderSection[];
-  /** Tool pages: full width to line up with the sidebar, which replaces the nav on large screens. */
+  /** Tool pages: full width, to line up with the sidebar. */
   app?: boolean;
-  theme: ThemeChoice;
+  resolvedTheme: ResolvedTheme;
   onThemeChange: (choice: ThemeChoice) => void;
 }
 
-const SiteHeader: React.FC<SiteHeaderProps> = ({ current, sections = DIFF_SECTIONS, app = false, theme, onThemeChange }) => {
-  const ids = useMemo(() => sections.map((s) => s.id), [sections]);
-  const active = useActiveSection(ids);
+const SiteHeader: React.FC<SiteHeaderProps> = ({ current, app = false, resolvedTheme, onThemeChange }) => {
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  // Prerendered pages don't know the platform; ⌘ is the guess until the browser says otherwise
+  const [mod, setMod] = useState('⌘');
+  // Set once the keyboard shortcut is listening (pages are prerendered, so the HTML arrives first)
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (!/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)) setMod('Ctrl');
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    setReady(true);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   return (
-    <header className="site-header">
-      <div className={cn(app ? 'page-wide' : 'page', 'flex h-16 items-center gap-4')}>
+    <header className="site-header" data-ready={ready || undefined}>
+      <div className={cn(app ? 'page-wide' : 'page', 'flex h-16 items-center gap-3')}>
         <a
           href={current === 'home' ? '#top' : '/'}
           className="flex items-center gap-2.5"
@@ -102,56 +93,49 @@ const SiteHeader: React.FC<SiteHeaderProps> = ({ current, sections = DIFF_SECTIO
             <Badge
               variant="outline"
               tabIndex={0}
-              className="hidden h-7 gap-2 rounded-full border bg-transparent px-3 font-mono text-[11.5px] font-normal text-foreground sm:inline-flex"
+              className="ml-1 hidden h-7 gap-2 rounded-full border bg-transparent px-3 font-mono text-[11.5px] font-normal text-foreground sm:inline-flex"
             >
               <span className="live-dot" aria-hidden="true" />
               100% local · free
             </Badge>
           </TooltipTrigger>
-          <TooltipContent className="max-w-60 text-center">
-            Your text never leaves this tab: no uploads, no accounts.
-          </TooltipContent>
+          <TooltipContent className="max-w-60 text-center">Your data never leaves this tab: no uploads, no accounts.</TooltipContent>
         </Tooltip>
-
         <a
           href={REPO_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="-ml-2 hidden h-7 items-center gap-1.5 rounded-full border px-3 font-mono text-[11.5px] text-foreground transition-colors hover:bg-muted sm:inline-flex"
+          className="-ml-1 hidden h-7 items-center gap-1.5 rounded-full border px-3 font-mono text-[11.5px] text-foreground transition-colors hover:bg-muted md:inline-flex"
         >
           <GitHubIcon className="size-3" />
           open source
         </a>
 
-        <nav className={cn('ml-auto hidden items-center gap-1', !app && 'md:flex')} aria-label="Sections">
-          {sections.map(({ id, label }) => (
-            <Button
-              key={id}
-              asChild
-              variant="ghost"
-              size="sm"
-              className="nav-link relative h-9 px-3 text-[14px] font-normal text-muted-foreground"
-            >
-              <a href={`#${id}`} data-active={active === id} aria-current={active === id ? 'true' : undefined}>
-                {label}
+        <button
+          type="button"
+          onClick={() => setPaletteOpen(true)}
+          aria-label="Search tools"
+          aria-keyshortcuts="Meta+K Control+K"
+          className="ml-auto inline-flex h-9 items-center gap-2 rounded-lg border bg-card px-2.5 text-[13.5px] text-muted-foreground transition-colors hover:text-foreground sm:w-56 lg:w-64"
+        >
+          <Search className="size-4" aria-hidden="true" />
+          <span className="hidden sm:inline">Search tools…</span>
+          <kbd className="ml-auto hidden rounded border bg-background px-1.5 font-mono text-[11px] sm:inline">{mod} K</kbd>
+        </button>
+
+        <nav className="hidden items-center lg:flex" aria-label="Site">
+          {(['about', 'contact'] as const).map((id) => (
+            <Button key={id} asChild variant="ghost" size="sm" className="h-9 px-3 text-[14px] font-normal text-muted-foreground">
+              <a href={pageById(id).path} aria-current={current === id ? 'page' : undefined}>
+                {pageById(id).name}
               </a>
             </Button>
           ))}
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-9 px-3 text-[14px] font-normal text-muted-foreground">
-                Tools <ChevronDown className="size-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72">
-              <ToolItems current={current} />
-            </DropdownMenuContent>
-          </DropdownMenu>
         </nav>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button asChild variant="outline" size="icon-sm" className={cn('ml-auto bg-card', !app && 'md:ml-2')}>
+            <Button asChild variant="outline" size="icon-sm" className="hidden bg-card sm:inline-flex">
               <a href={REPO_URL} target="_blank" rel="noopener noreferrer" aria-label="diffdrop on GitHub">
                 <GitHubIcon className="size-4" />
               </a>
@@ -160,50 +144,44 @@ const SiteHeader: React.FC<SiteHeaderProps> = ({ current, sections = DIFF_SECTIO
           <TooltipContent>Source on GitHub</TooltipContent>
         </Tooltip>
 
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          size="sm"
-          value={theme}
-          onValueChange={(v) => v && onThemeChange(v as ThemeChoice)}
-          aria-label="Color theme"
-          className="-ml-2 rounded-full bg-card"
-        >
-          {THEMES.map(({ value, label, Icon }) => (
-            <Tooltip key={value}>
-              <TooltipTrigger asChild>
-                <ToggleGroupItem value={value} aria-label={label} className="px-2.5">
-                  <Icon />
-                </ToggleGroupItem>
-              </TooltipTrigger>
-              <TooltipContent>{label}</TooltipContent>
-            </Tooltip>
-          ))}
-        </ToggleGroup>
+        <ThemeSwitch resolved={resolvedTheme} onChange={onThemeChange} />
 
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon-sm" className={cn('-ml-2 bg-card', app ? 'lg:hidden' : 'md:hidden')} aria-label="Menu">
+            <Button variant="outline" size="icon-sm" className="bg-card lg:hidden" aria-label="Menu">
               <Menu />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="max-h-[80svh] w-72 overflow-y-auto">
-            {sections.length > 0 && (
-              <>
-                <DropdownMenuLabel className="font-mono text-xs font-normal text-muted-foreground">on this page</DropdownMenuLabel>
-                {sections.map(({ id, label }) => (
+          <DropdownMenuContent align="end" className="max-h-[75svh] w-64 overflow-y-auto">
+            {TOOL_GROUPS.map((group) => (
+              <React.Fragment key={group.label}>
+                <DropdownMenuLabel className="pt-2 font-mono text-[11px] font-normal text-faint">{group.label.toLowerCase()}</DropdownMenuLabel>
+                {group.ids.map((id) => (
                   <DropdownMenuItem key={id} asChild>
-                    <a href={`#${id}`}>{label}</a>
+                    <a href={pageById(id).path} aria-current={id === current ? 'page' : undefined} className={id === current ? 'font-semibold' : undefined}>
+                      {pageById(id).name}
+                    </a>
                   </DropdownMenuItem>
                 ))}
-                <DropdownMenuSeparator />
-              </>
-            )}
-            <DropdownMenuLabel className="font-mono text-xs font-normal text-muted-foreground">tools</DropdownMenuLabel>
-            <ToolItems current={current} />
+              </React.Fragment>
+            ))}
+            <DropdownMenuSeparator />
+            {SITE_LINKS.map((id) => (
+              <DropdownMenuItem key={id} asChild>
+                <a href={pageById(id).path} aria-current={id === current ? 'page' : undefined}>
+                  {pageById(id).name}
+                </a>
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuItem asChild>
+              <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
+                GitHub
+              </a>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </header>
   );
 };
