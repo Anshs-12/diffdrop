@@ -6,7 +6,7 @@ test.describe('diffdrop', () => {
     const errors = trackErrors(page);
     await page.goto('/diff-checker/');
     await expect(page).toHaveTitle(/^Diff checker - compare text and code online/);
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Everything they paywall.');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Diff checker');
     expect(errors).toEqual([]);
   });
 
@@ -81,6 +81,21 @@ test.describe('diffdrop', () => {
     await fresh.goto(url);
     await expect.poll(() => editorText(fresh, 'Original text')).toBe(ORIGINAL);
     await expect.poll(() => editorText(fresh, 'Changed text')).toBe(CHANGED);
+  });
+
+  test('marks a missing final newline like git', async ({ page }) => {
+    await page.goto('/diff-checker/');
+    await fillEditors(page, 'a\nb', 'a\nb\n');
+    const marker = page.locator('.diff-table .no-eol');
+    await expect(marker).toHaveCount(1);
+    await expect(marker).toHaveText('\\ No newline at end of file');
+    // In unified view it sits on the removed line (a), not the added one
+    await page.getByRole('radio', { name: 'Unified' }).click();
+    await expect(page.locator('.diff-table.unified td.is-del .no-eol')).toHaveCount(1);
+    await expect(page.locator('.diff-table.unified td.is-add .no-eol')).toHaveCount(0);
+    // In-editor mode says it in a note
+    await page.getByRole('radio', { name: 'Highlight changes in the editors' }).click();
+    await expect(page.getByText('\\ No newline at end of file in a')).toBeVisible();
   });
 
   test('finds text anywhere in the diff', async ({ page }) => {

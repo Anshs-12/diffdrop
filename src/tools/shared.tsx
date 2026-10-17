@@ -80,7 +80,7 @@ export function Panel({
   );
 }
 
-function IconButton({
+export function IconButton({
   label,
   onClick,
   disabled,
@@ -104,7 +104,18 @@ function IconButton({
 }
 
 /** Open (or clear) the input; files are read locally. */
-export function InputActions({ onLoad, onClear, canClear }: { onLoad: (text: string) => void; onClear: () => void; canClear: boolean }) {
+export function InputActions({
+  onLoad,
+  onClear,
+  canClear,
+  accept = '.json,application/json,text/plain',
+}: {
+  onLoad: (text: string) => void;
+  onClear: () => void;
+  canClear: boolean;
+  /** File types offered in the picker. */
+  accept?: string;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <>
@@ -118,7 +129,7 @@ export function InputActions({ onLoad, onClear, canClear }: { onLoad: (text: str
         ref={inputRef}
         type="file"
         hidden
-        accept=".json,application/json,text/plain"
+        accept={accept}
         onChange={async (e) => {
           const file = e.target.files?.[0];
           e.target.value = '';
@@ -170,6 +181,31 @@ export function OutputActions({ text, fileName, mime, bom = false }: { text: str
   );
 }
 
+/** A one-line status under a tool's options: neutral, success or error, with an optional action. */
+export function StatusLine({
+  tone,
+  children,
+  action,
+  label = 'Status',
+}: {
+  tone: 'muted' | 'ok' | 'error' | 'warn';
+  children: React.ReactNode;
+  action?: React.ReactNode;
+  label?: string;
+}) {
+  const Icon = tone === 'ok' ? CircleCheck : tone === 'error' ? CircleAlert : tone === 'warn' ? TriangleAlert : null;
+  const color = { muted: 'text-faint', ok: 'text-add', error: 'text-del', warn: 'text-amber-700 dark:text-amber-400' }[tone];
+  return (
+    <div className="flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-2 font-mono text-[12.5px]" aria-live="polite" aria-label={label}>
+      <span className={cn('inline-flex items-center gap-1.5', color)}>
+        {Icon && <Icon className="size-3.5 shrink-0" aria-hidden="true" />}
+        {children}
+      </span>
+      {action}
+    </div>
+  );
+}
+
 /** Things about valid JSON that the tools can't keep as written. */
 function warnings(scan: JsonScan): string[] {
   const out: string[] = [];
@@ -179,11 +215,6 @@ function warnings(scan: JsonScan): string[] {
     out.push(`Duplicate key ${JSON.stringify(d.key)} at line ${d.line}, column ${d.column}${more}: only the last value is kept`);
   }
   if (scan.reorderedKeys) out.push('Number-like keys ("1", "42") are listed first in their object; browsers always order them that way');
-  if (scan.roundedNumbers) {
-    out.push(
-      `${scan.roundedNumbers.toLocaleString()} number${scan.roundedNumbers === 1 ? '' : 's'} like ${scan.roundedExample} can't be kept exactly in this browser and will be rounded`,
-    );
-  }
   return out;
 }
 

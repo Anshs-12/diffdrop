@@ -6,7 +6,7 @@ import ToolApp from './ToolApp';
 import { readPage } from '@/variant';
 import '@/index.css';
 
-// Entry for the JSON tool pages; doesn't load the diff app
+// Entry for the tool pages (JSON tools, Base64, JWT, …); doesn't load the diff app
 const root = document.getElementById('root')!;
 
 ReactDOM.createRoot(root).render(

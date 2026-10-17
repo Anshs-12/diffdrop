@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parse as parseYaml } from 'yaml';
 import { jsonStats, jsonToCsv, jsonToYaml, pathString, stringifyJson } from './jsonTools';
 import { rng } from '@/test/random';
-import { JsonNumber, LOSSLESS, parseJson, scanJson } from './jsonValue';
+import { JsonNumber, SOURCE_ACCESS, parseJson, parseWithPlaceholders, scanJson, stringify } from './jsonValue';
 
 /** Random JSON values with deliberately awkward strings and keys. */
 function randomJson(rand: () => number, depth = 0): unknown {
@@ -160,7 +160,34 @@ describe('jsonToCsv edge cases', () => {
 });
 
 describe('lossless numbers', () => {
-  it('this runtime supports source access', () => expect(LOSSLESS).toBe(true));
+  it('this runtime supports source access', () => expect(SOURCE_ACCESS).toBe(true));
+
+  it('keeps 64-bit IDs exact through CSV, including inside nested arrays', () => {
+    const text = '[{"id":9007199254740993,"big":-9223372036854775807,"ids":[9007199254740993]}]';
+    for (const parse of [parseJson, parseWithPlaceholders]) {
+      expect(jsonToCsv(parse(text)).csv).toBe('id,big,ids\n9007199254740993,-9223372036854775807,[9007199254740993]\n');
+    }
+  });
+
+  it('parses without source access exactly like with it (random)', () => {
+    const rand = rng(47);
+    const numbers = ['0', '-0', '1.0', '1e5', '1E-7', '9007199254740993', '-9223372036854775807', '0.1', '3.14159265358979323846', '42', '1e400'];
+    for (let k = 0; k < 3000; k++) {
+      const value = randomJson(rand);
+      let text = JSON.stringify(value);
+      // Swap some numbers for tricky ones, outside strings only
+      text = text.replace(/(?<=[\[:,])-?\d+(\.\d+)?(?=[,\]}])/g, (m) => (rand() < 0.5 ? numbers[Math.floor(rand() * numbers.length)]! : m));
+      const a = parseJson(text);
+      const b = parseWithPlaceholders(text);
+      expect(stringify(b), text).toBe(stringify(a));
+      expect(stringify(a), text).toBe(text);
+    }
+  });
+
+  it('never confuses a string with a placeholder', () => {
+    const text = '{"s":"\uE000abc:0","n":1.0}';
+    expect(stringify(parseWithPlaceholders(text))).toBe(text);
+  });
 
   it('keeps big integers, trailing zeros and exponents through formatting, YAML and CSV', () => {
     const text = '{"id":12345678901234567890,"price":1.10,"big":1e400,"e":1E5,"z":-0,"plain":42,"f":0.5}';

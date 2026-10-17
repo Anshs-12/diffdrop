@@ -25,7 +25,9 @@ import DiffViewport, { type DiffViewportHandle } from '@/components/DiffViewport
 import { FullSplitTable, type RowContext } from '@/components/DiffRows';
 import FindBar from '@/components/FindBar';
 import SummaryPanel from '@/components/SummaryPanel';
-import { Features, Footer, Hero, JsonGuide, Paywall, Privacy, ToolCards } from '@/components/Landing';
+import { Features, Footer, Paywall } from '@/components/Landing';
+import ToolShell, { ToolGuide } from '@/components/ToolShell';
+import { DIFF_CONTENT } from '@/components/diffContent';
 import { LogoMark } from '@/components/Icons';
 
 interface Snapshot {
@@ -70,7 +72,7 @@ const App: React.FC<{ variant: Variant }> = ({ variant }) => {
   const { choice: theme, resolved: resolvedTheme, setChoice: setTheme } = useTheme();
 
   // Decode shared texts from the URL fragment on first render
-  const shared = useMemo(() => decodeHash(window.location.hash), []);
+  const shared = useMemo(() => (typeof window === 'undefined' ? null : decodeHash(window.location.hash)), []);
 
   const [originalText, setOriginalText] = useState(shared?.original ?? '');
   const [changedText, setChangedText] = useState(shared?.changed ?? '');
@@ -79,7 +81,7 @@ const App: React.FC<{ variant: Variant }> = ({ variant }) => {
 
   const [placement, setPlacement] = useState<HighlightPlacement>('below');
   const [viewMode, setViewMode] = useState<ViewMode>(() =>
-    window.matchMedia('(max-width: 720px)').matches ? 'unified' : 'split',
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches ? 'unified' : 'split',
   );
   const [options, setOptions] = useState<ToolbarOptions>({
     ignoreWhitespace: false,
@@ -414,6 +416,15 @@ const App: React.FC<{ variant: Variant }> = ({ variant }) => {
     setOptions((o) => ({ ...o, [key]: value }));
   }, []);
 
+  // Last line of each side, when it has no newline after it (for git's "\ No newline at end of file")
+  const noEol = useMemo(() => {
+    const last = (side: 'leftNum' | 'rightNum') => {
+      for (let k = lines.length - 1; k >= 0; k--) if (lines[k]![side] != null) return lines[k]![side]!;
+      return null;
+    };
+    return { left: result?.eof.oldMissing ? last('leftNum') : null, right: result?.eof.newMissing ? last('rightNum') : null };
+  }, [lines, result]);
+
   const rowCtx: RowContext = useMemo(
     () => ({
       lines,
@@ -428,8 +439,9 @@ const App: React.FC<{ variant: Variant }> = ({ variant }) => {
       currentMatch,
       onMergeLeftToRight: handleMergeLeftToRight,
       onMergeRightToLeft: handleMergeRightToLeft,
+      noEol,
     }),
-    [lines, options.lineWrap, syntaxLeft, syntaxRight, result, find, currentMatch, handleMergeLeftToRight, handleMergeRightToLeft],
+    [noEol, lines, options.lineWrap, syntaxLeft, syntaxRight, result, find, currentMatch, handleMergeLeftToRight, handleMergeRightToLeft],
   );
 
   // ── Diff body (separate panel) ──
@@ -441,7 +453,7 @@ const App: React.FC<{ variant: Variant }> = ({ variant }) => {
         <div className="flex min-h-52 flex-col items-center justify-center gap-3 px-4 py-8 text-center text-sm text-muted-foreground">
           <p>Paste or drop something into a and b, and the differences show up here.</p>
           <Button variant="outline" size="sm" onClick={handleExample}>
-            Load an example <ArrowRight />
+            {isJson ? 'Load a JSON example' : 'Load an example'} <ArrowRight />
           </Button>
         </div>
       </div>
@@ -483,12 +495,12 @@ const App: React.FC<{ variant: Variant }> = ({ variant }) => {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <SiteHeader current={isJson ? 'json-diff' : 'diff-checker'} theme={theme} onThemeChange={setTheme} />
-      <main>
-        <Hero variant={variant} onTryExample={handleExample} />
-
-        <section className="scroll-mt-20 pb-20" id="try" aria-label="Compare texts">
-          <div className="page-wide">
+      <SiteHeader current={isJson ? 'json-diff' : 'diff-checker'} sections={[]} app theme={theme} onThemeChange={setTheme} />
+      <ToolShell
+        current={isJson ? 'json-diff' : 'diff-checker'}
+        title={DIFF_CONTENT[variant].title}
+        description={DIFF_CONTENT[variant].description}
+        tool={
             <div className="workspace">
               <Toolbar
                 placement={placement}
@@ -546,6 +558,12 @@ const App: React.FC<{ variant: Variant }> = ({ variant }) => {
                 onError={(m) => toast.error(m)}
               />
 
+              {inEditor && (noEol.left != null) !== (noEol.right != null) && !options.ignoreWhitespace && (
+                <div className="border-t px-4 py-2 font-mono text-[12.5px] text-muted-foreground">
+                  \ No newline at end of file in {noEol.left != null ? 'a' : 'b'}
+                </div>
+              )}
+
               {identical && (
                 <div className="flex items-center gap-2 border-t px-4 py-2 font-mono text-[12.5px] text-add">
                   <CircleCheck className="size-3.5" /> a and b are identical
@@ -568,15 +586,16 @@ const App: React.FC<{ variant: Variant }> = ({ variant }) => {
 
               {!inEditor && body}
             </div>
-          </div>
-        </section>
-
-        {isJson && <JsonGuide />}
-        <ToolCards current={isJson ? 'json-diff' : 'diff-checker'} />
-        <Features />
-        <Paywall />
-        <Privacy />
-      </main>
+        }
+      >
+        <ToolGuide stepsTitle={DIFF_CONTENT[variant].stepsTitle} steps={DIFF_CONTENT[variant].steps} faq={DIFF_CONTENT[variant].faq} />
+        {!isJson && (
+          <>
+            <Features />
+            <Paywall />
+          </>
+        )}
+      </ToolShell>
       <Footer current={isJson ? 'json-diff' : 'diff-checker'} />
 
       {printing && result && printModel && (

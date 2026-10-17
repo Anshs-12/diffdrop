@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test --project=app",
+    "test:safari": "playwright test --project=safari",
     "test:perf": "playwright test --project=perf",
     "test:all": "vitest run && playwright test"
   },

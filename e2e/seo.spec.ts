@@ -36,12 +36,13 @@ test.describe('search and sharing', () => {
   });
 
   test('header and footer link to GitHub, issues and the JSON page', async ({ page }) => {
-    await page.goto('/diff-checker/');
+    await page.goto('/');
     const footer = page.getByRole('navigation', { name: 'Footer' });
     await expect(footer.getByRole('link', { name: 'report a bug / request a feature' })).toHaveAttribute('href', /github\.com\/.+\/issues$/);
     await expect(footer.getByRole('link', { name: 'GitHub' })).toHaveAttribute('target', '_blank');
     await expect(page.getByRole('link', { name: 'diffdrop on GitHub' })).toHaveAttribute('rel', 'noopener noreferrer');
-    await expect(page.getByRole('link', { name: 'open source', exact: true })).toHaveAttribute('href', /github\.com\/Anshs-12\/diffdrop$/);
+    await expect(page.getByRole('banner').getByRole('link', { name: 'open source', exact: true })).toHaveAttribute('href', /github\.com\/Anshs-12\/diffdrop$/);
+    await expect(page.getByRole('main').getByRole('link', { name: 'open source', exact: true })).toHaveAttribute('href', /github\.com\/Anshs-12\/diffdrop$/);
     await expect(page.getByRole('heading', { level: 1 }).getByRole('link', { name: 'Open source.' })).toHaveAttribute('href', /github\.com\/Anshs-12\/diffdrop$/);
     await expect(page.getByRole('navigation', { name: 'Tools' }).getByRole('link', { name: 'JSON diff' })).toHaveAttribute('href', '/json-diff/');
   });
@@ -69,6 +70,22 @@ test.describe('search and sharing', () => {
     for (const name of ['Diff checker', 'JSON formatter', 'JSON viewer', 'How it stays private']) expect(html).toContain(name);
   });
 
+  for (const [path, h1, how] of [
+    ['/diff-checker/', 'Diff checker', 'How to compare two texts'],
+    ['/json-diff/', 'JSON diff', 'How to compare two JSON files'],
+  ] as const) {
+    test(`${path} ships its heading, how-to, FAQ and FAQ data in the static HTML`, async ({ request }) => {
+      const html = await (await request.get(path)).text();
+      expect(html).toContain(`>${h1}</h1>`);
+      expect(html).toContain(how);
+      const ld = JSON.parse(/<script type="application\/ld\+json">(.*?)<\/script>/.exec(html)![1]!);
+      const faq = ld['@graph'].find((g: { '@type': string }) => g['@type'] === 'FAQPage');
+      expect(faq.mainEntity.length).toBeGreaterThan(0);
+      for (const q of faq.mainEntity) expect(html).toContain(q.name.replace(/'/g, '&#x27;'));
+      expect(html).not.toMatch(/offline/i);
+    });
+  }
+
   test('links shared before the move still open in the diff checker', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await page.goto('/diff-checker/');
@@ -91,7 +108,8 @@ test.describe('/json-diff', () => {
     await page.goto('/json-diff/');
     await expect(page).toHaveTitle(/^JSON diff - compare two JSON files online/);
     expect(await page.locator('link[rel="canonical"]').getAttribute('href')).toMatch(/\/json-diff\/$/);
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Compare JSON online.');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('JSON diff');
+    await expect(page.getByRole('complementary', { name: 'Tools' }).getByRole('link', { name: 'JSON diff' })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('heading', { name: 'How to compare two JSON files' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Tools' }).getByRole('link', { name: 'Diff checker' })).toHaveAttribute('href', '/diff-checker/');
   });

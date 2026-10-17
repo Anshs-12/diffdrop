@@ -16,7 +16,14 @@ export type PageId =
   | 'json-validator'
   | 'json-to-csv'
   | 'json-to-yaml'
-  | 'json-viewer';
+  | 'json-viewer'
+  | 'base64'
+  | 'unix-timestamp'
+  | 'jwt-decoder'
+  | 'regex-tester'
+  | 'url-encoder'
+  | 'guide-compare-json'
+  | 'guide-json-to-csv';
 
 export interface Page {
   id: PageId;
@@ -114,6 +121,76 @@ export const PAGES: Page[] = [
     name: 'JSON viewer',
     blurb: 'Explore JSON as a collapsible tree and copy paths.',
     priority: 0.8,
+  },
+  {
+    id: 'base64',
+    path: '/base64-encode-decode/',
+    title: 'Base64 encode and decode online, free | diffdrop',
+    description:
+      'Encode text or files to Base64 and decode Base64 back to text, images or files. UTF-8 safe, URL-safe option, clear errors. Free, and nothing is uploaded.',
+    name: 'Base64 encoder',
+    blurb: 'Encode and decode Base64 text and files.',
+    priority: 0.8,
+  },
+  {
+    id: 'unix-timestamp',
+    path: '/unix-timestamp-converter/',
+    title: 'Unix timestamp converter - epoch to date, free | diffdrop',
+    description:
+      'Convert Unix timestamps to dates and dates to timestamps. Seconds, ms, µs or ns detected automatically, any time zone, ISO 8601 and more. Free, in browser.',
+    name: 'Timestamp converter',
+    blurb: 'Convert Unix epoch time to dates and back.',
+    priority: 0.8,
+  },
+  {
+    id: 'jwt-decoder',
+    path: '/jwt-decoder/',
+    title: 'JWT decoder - decode and verify JSON Web Tokens | diffdrop',
+    description:
+      'Decode a JWT to read its header, payload and expiry, then verify the signature with a secret or public key. Free, and your token never leaves your browser.',
+    name: 'JWT decoder',
+    blurb: 'Decode JWTs, check expiry and verify signatures.',
+    priority: 0.8,
+  },
+  {
+    id: 'regex-tester',
+    path: '/regex-tester/',
+    title: 'Regex tester - test JavaScript regex online, free | diffdrop',
+    description:
+      'Test regular expressions live: every match highlighted, capture groups and named groups listed, replace preview, all JavaScript flags. Free, in browser.',
+    name: 'Regex tester',
+    blurb: 'Test regular expressions with live matches and groups.',
+    priority: 0.8,
+  },
+  {
+    id: 'url-encoder',
+    path: '/url-encoder-decoder/',
+    title: 'URL encoder and decoder - percent-encoding, free | diffdrop',
+    description:
+      'Encode and decode URLs and query strings: component, full URL or form style, with bad escapes pinpointed and any URL split into parts. Free, in browser.',
+    name: 'URL encoder',
+    blurb: 'Percent-encode and decode URLs and query strings.',
+    priority: 0.8,
+  },
+  {
+    id: 'guide-compare-json',
+    path: '/guides/compare-json-files/',
+    title: 'How to compare two JSON files (and ignore key order)',
+    description:
+      'A practical guide to comparing two JSON files: why plain diffs mislead, how to ignore key order and formatting, and how to read the changes. Free tool.',
+    name: 'Comparing JSON files',
+    blurb: 'Why plain diffs mislead, and how to ignore key order.',
+    priority: 0.6,
+  },
+  {
+    id: 'guide-json-to-csv',
+    path: '/guides/json-to-csv-excel/',
+    title: 'JSON to CSV for Excel: nested objects, arrays, encoding',
+    description:
+      'How to turn JSON into a CSV that opens cleanly in Excel: flattening nested objects, handling arrays, UTF-8 and the BOM, delimiters and formula injection.',
+    name: 'JSON to CSV for Excel',
+    blurb: 'Nested objects, arrays, encoding and Excel quirks.',
+    priority: 0.6,
   },
 ];
 

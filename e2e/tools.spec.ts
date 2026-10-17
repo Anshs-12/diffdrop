@@ -27,7 +27,7 @@ for (const tool of TOOLS) {
     await expect(page.getByRole('heading', { name: 'How it works' })).toBeVisible();
     // Links to every other page
     const tools = page.getByRole('navigation', { name: 'Tools' });
-    await expect(tools.getByRole('link')).toHaveCount(7);
+    await expect(tools.getByRole('link')).toHaveCount(14); // every other page
     expect(errors).toEqual([]);
   });
 
@@ -93,13 +93,23 @@ test('JSON to CSV downloads with a BOM, escapes formulas and unwraps API respons
   await page.goto('/json-to-csv/');
   await page.getByLabel('JSON input', { exact: true }).fill('{"total":2,"data":[{"name":"=1+1","city":"Zürich"},{"name":"Bo"}]}');
   await expect(page.getByLabel('JSON status')).toContainText('2 rows, 2 columns, from the "data" array');
+  // Escaped by default; switching it off keeps the raw text
+  await expect.poll(() => editorText(page, 'CSV output')).toBe("name,city\n'=1+1,Zürich\nBo,\n");
+  await page.getByLabel('Escape formulas').click();
   await expect.poll(() => editorText(page, 'CSV output')).toBe('name,city\n=1+1,Zürich\nBo,\n');
   await page.getByLabel('Escape formulas').click();
-  await expect.poll(() => editorText(page, 'CSV output')).toBe("name,city\n'=1+1,Zürich\nBo,\n");
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download data.csv' }).click()]);
   const bytes = await import('node:fs').then((fs) => download.path().then((p) => fs.readFileSync(p)));
   expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
   expect(bytes.subarray(3).toString('utf8')).toBe("name,city\n'=1+1,Zürich\nBo,\n");
+});
+
+test('JSON to CSV keeps 64-bit numbers exact in the input and the output', async ({ page }) => {
+  await page.goto('/json-to-csv/');
+  const input = '[{"id":9007199254740993,"big":-9223372036854775807}]';
+  await page.getByLabel('JSON input', { exact: true }).fill(input);
+  await expect.poll(() => editorText(page, 'CSV output')).toBe('id,big\n9007199254740993,-9223372036854775807\n');
+  expect(await editorText(page, 'JSON input')).toBe(input);
 });
 
 test('JSON to YAML writes valid, readable YAML', async ({ page }) => {
@@ -108,7 +118,8 @@ test('JSON to YAML writes valid, readable YAML', async ({ page }) => {
   await expect.poll(() => editorText(page, 'YAML output')).toBe('name: diffdrop\nversion: "1.5.0"\nenabled: "yes"\ntags:\n- a\n- b\n');
 });
 
-test('viewer expands, searches and copies paths', async ({ page, context }) => {
+test('viewer expands, searches and copies paths', async ({ page, context, browserName }) => {
+  test.skip(browserName === 'webkit', "Playwright can't grant clipboard access in WebKit");
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/json-viewer/');
   await page.getByRole('button', { name: 'Load example' }).click();
@@ -135,16 +146,19 @@ test('viewer does not offer to expand empty objects and arrays', async ({ page }
   await expect(tree.getByRole('button', { name: 'Expand' })).toHaveCount(1);
 });
 
-test('header links to every tool, on desktop and on mobile', async ({ page }) => {
+test('sidebar links to every tool on desktop, the menu on mobile', async ({ page }) => {
   await page.goto('/json-to-yaml/');
-  await page.getByRole('button', { name: 'Tools' }).click();
-  await expect(page.getByRole('menuitem')).toHaveCount(8);
-  await page.getByRole('menuitem', { name: /JSON viewer/ }).click();
+  const sidebar = page.getByRole('complementary', { name: 'Tools' });
+  await expect(sidebar.getByRole('link', { name: 'JSON to YAML' })).toHaveAttribute('aria-current', 'page');
+  await sidebar.getByRole('link', { name: 'JSON viewer' }).click();
   await expect(page).toHaveURL(/\/json-viewer\/$/);
+  await expect(page.getByRole('button', { name: 'Menu' })).toBeHidden();
   await page.setViewportSize({ width: 390, height: 800 });
+  await expect(sidebar).toBeHidden();
   await page.getByRole('button', { name: 'Menu' }).click();
-  await expect(page.getByRole('menuitem', { name: /JSON formatter/ })).toBeVisible();
-  await expect(page.getByRole('menuitem', { name: 'How it works' })).toBeVisible();
+  await expect(page.getByRole('menuitem')).toHaveCount(15);
+  await page.getByRole('menuitem', { name: /Diff checker/ }).click();
+  await expect(page).toHaveURL(/\/diff-checker\/$/);
 });
 
 test('tool pages make no network requests while working', async ({ page }) => {

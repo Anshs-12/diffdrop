@@ -17,6 +17,15 @@ export interface RowContext {
   currentMatch: number;
   onMergeLeftToRight?: (index: number) => void;
   onMergeRightToLeft?: (index: number) => void;
+  /** Number of the last line on each side when it has no final newline (null when it has one). */
+  noEol?: { left: number | null; right: number | null };
+}
+
+/** Like git: marks a changed last line that has no newline after it. */
+function NoEol({ ctx, line, side }: { ctx: RowContext; line: DiffLine; side: 'left' | 'right' }) {
+  const num = side === 'left' ? line.leftNum : line.rightNum;
+  if (line.type === 'unchanged' || num == null || num !== ctx.noEol?.[side]) return null;
+  return <span className="no-eol">\ No newline at end of file</span>;
 }
 
 /** Fixed row height (px) when lines don't wrap; must match `.diff-table td` in index.css. */
@@ -84,6 +93,7 @@ export function SplitRow({ value, rowIndex, ctx, trRef }: { value: number; rowIn
             find={ctx.find}
           />
         )}
+        <NoEol ctx={ctx} line={line} side="left" />
       </td>
       <td className="merge-gutter">
         {canMerge && (
@@ -123,6 +133,7 @@ export function SplitRow({ value, rowIndex, ctx, trRef }: { value: number; rowIn
             find={ctx.find}
           />
         )}
+        <NoEol ctx={ctx} line={line} side="right" />
       </td>
     </tr>
   );
@@ -152,6 +163,7 @@ export function UnifiedRow({ value, rowIndex, ctx, trRef }: { value: number; row
           tokens={tokensFor(ctx, added ? 'right' : 'left', num, text)}
           find={ctx.find}
         />
+        <NoEol ctx={ctx} line={line} side={added ? 'right' : 'left'} />
       </td>
     </tr>
   );

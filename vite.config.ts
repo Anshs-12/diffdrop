@@ -7,6 +7,8 @@ import tailwindcss from '@tailwindcss/vite';
 import { CSP } from './src/csp';
 import { GOOGLE_SITE_VERIFICATION, PAGES, SITE_URL, type Page, type PageId } from './src/site';
 import { TOOL_CONTENT } from './src/tools/content';
+import { DIFF_CONTENT } from './src/components/diffContent';
+import { GUIDE_META } from './src/guides/meta';
 
 const FAVICON =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0a0a'/%3E%3Crect x='8' y='9' width='10' height='3' rx='1.5' fill='%23e8908e'/%3E%3Crect x='8' y='14.5' width='16' height='3' rx='1.5' fill='%23fafafa' opacity='.55'/%3E%3Crect x='14' y='20' width='10' height='3' rx='1.5' fill='%239ccb84'/%3E%3C/svg%3E";
@@ -36,6 +38,23 @@ const isToolPage = (id: PageId): id is keyof typeof TOOL_CONTENT => id in TOOL_C
 /** schema.org data for search engines: the app, plus the FAQ on tool pages. */
 function structuredData(page: Page): HtmlTagDescriptor {
   const url = `${SITE_URL}${page.path}`;
+  const guide = GUIDE_META[page.id as keyof typeof GUIDE_META];
+  if (guide) {
+    const article = {
+      '@context': 'https://schema.org',
+      '@type': 'TechArticle',
+      headline: guide.h1,
+      description: page.description,
+      url,
+      datePublished: guide.published,
+      dateModified: guide.published,
+      author: { '@type': 'Organization', name: 'diffdrop', url: `${SITE_URL}/` },
+      publisher: { '@type': 'Organization', name: 'diffdrop', url: `${SITE_URL}/` },
+      mainEntityOfPage: url,
+    };
+    const json = JSON.stringify(article).replace(/</g, '\\u003c');
+    return { tag: 'script', attrs: { type: 'application/ld+json' }, children: json, injectTo: 'head' };
+  }
   const graph: object[] = [
     {
       '@type': 'SoftwareApplication',
@@ -48,10 +67,15 @@ function structuredData(page: Page): HtmlTagDescriptor {
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     },
   ];
-  if (isToolPage(page.id)) {
+  const faq = isToolPage(page.id)
+    ? TOOL_CONTENT[page.id].faq
+    : page.id === 'diff-checker' || page.id === 'json-diff'
+      ? DIFF_CONTENT[page.id === 'json-diff' ? 'json' : 'text'].faq
+      : null;
+  if (faq) {
     graph.push({
       '@type': 'FAQPage',
-      mainEntity: TOOL_CONTENT[page.id].faq.map(({ q, a }) => ({
+      mainEntity: faq.map(({ q, a }) => ({
         '@type': 'Question',
         name: q,
         acceptedAnswer: { '@type': 'Answer', text: a },
@@ -129,8 +153,7 @@ function pages(): Plugin {
 }
 
 /**
- * After the client build, server-renders the home page and each tool page
- * (src/prerender.tsx) into its HTML, so crawlers get the heading, how-to and FAQ without running JS.
+ * After the client build, server-renders every page (src/prerender.tsx) into its HTML, so crawlers get the heading, how-to and FAQ without running JS.
  * The browser then renders the page fresh over it.
  */
 function prerender(): Plugin {
@@ -149,12 +172,14 @@ function prerender(): Plugin {
       await build({
         configFile: path.resolve(__dirname, 'vite.config.ts'),
         logLevel: 'warn',
+        // Bundle dependencies too, so CommonJS packages like lz-string load in Node
+        ssr: { noExternal: true },
         build: { ssr: path.resolve(__dirname, 'src/prerender.tsx'), outDir: ssrDir, emptyOutDir: true },
       });
       const { render } = (await import(pathToFileURL(path.join(ssrDir, 'prerender.js')).href)) as {
         render: (page: PageId) => string;
       };
-      for (const page of PAGES.filter((p) => p.id === 'home' || isToolPage(p.id))) {
+      for (const page of PAGES) {
         const file = path.resolve(outDir, htmlFile(page));
         const html = fs.readFileSync(file, 'utf8');
         const empty = `<div id="root" data-page="${page.id}"></div>`;

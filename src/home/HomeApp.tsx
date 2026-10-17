@@ -1,161 +1,72 @@
 import React from 'react';
-import {
-  ArrowDown,
-  ArrowRight,
-  Lightbulb,
-  Braces,
-  Check,
-  Columns2,
-  FileCode,
-  GitCompareArrows,
-  Infinity as InfinityIcon,
-  ListTree,
-  Scale,
-  Server,
-  Sheet,
-  ShieldCheck,
-  WandSparkles,
-} from 'lucide-react';
-import { pageById, REPO_URL, type PageId } from '@/site';
+import { ArrowDown, ArrowRight, Check, Infinity as InfinityIcon, Lightbulb, Scale, Server } from 'lucide-react';
+import { pageById, REPO_URL } from '@/site';
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui/button';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import SiteHeader, { type HeaderSection } from '@/components/SiteHeader';
 import { Footer, Privacy, SectionTitle } from '@/components/Landing';
+import { TOOL_GROUPS, TOOL_ICONS, TOOL_ONLY_GROUPS, type ToolPageId } from '@/components/ToolShell';
 
 const SECTIONS: HeaderSection[] = [
-  { id: 'compare', label: 'Compare' },
-  { id: 'json', label: 'JSON' },
+  { id: 'tools', label: 'Tools' },
+  { id: 'guides', label: 'Guides' },
   { id: 'why', label: 'Why free' },
   { id: 'privacy', label: 'Privacy' },
 ];
 
-interface Tool {
-  id: PageId;
-  Icon: typeof Check;
-  points: string[];
-  /** A small picture of the tool's output, for the larger cards. */
-  preview?: React.ReactNode;
-}
+/** What each tool card lists under its description. */
+const TOOL_COUNT = TOOL_ONLY_GROUPS.reduce((n, g) => n + g.ids.length, 0);
+const GUIDES = TOOL_GROUPS.find((g) => g.label === 'Guides')!.ids;
 
-const Line: React.FC<{ kind?: 'add' | 'del'; children: React.ReactNode }> = ({ kind, children }) => (
-  <span
-    className={
-      'block px-3 ' + (kind === 'add' ? 'bg-add-bg text-add' : kind === 'del' ? 'bg-del-bg text-del' : 'text-muted-foreground')
-    }
-  >
-    {kind === 'add' ? '+ ' : kind === 'del' ? '- ' : '  '}
-    {children}
-  </span>
-);
-
-const COMPARE: Tool[] = [
-  {
-    id: 'diff-checker',
-    Icon: GitCompareArrows,
-    points: ['Line and word level changes', 'Split or unified view', 'Files of 100,000+ lines'],
-    preview: (
-      <>
-        <Line>function total(items) {'{'}</Line>
-        <Line kind="del">  return sum;</Line>
-        <Line kind="add">  return sum * (1 + tax);</Line>
-        <Line>{'}'}</Line>
-      </>
-    ),
-  },
-  {
-    id: 'json-diff',
-    Icon: Columns2,
-    points: ['Ignores key order and formatting', 'Every changed key and value', 'Syntax errors with line and column'],
-    preview: (
-      <>
-        <Line>"name": "Ada Lovelace",</Line>
-        <Line kind="del">"city": "London",</Line>
-        <Line kind="add">"city": "Paris",</Line>
-        <Line kind="add">"active": true</Line>
-      </>
-    ),
-  },
-];
-
-const JSON_TOOLS: Tool[] = [
-  { id: 'json-formatter', Icon: WandSparkles, points: ['2 or 4 spaces, tabs or minified', 'Sort keys A–Z'] },
-  { id: 'json-validator', Icon: ShieldCheck, points: ['Exact line and column of errors', 'Duplicate key warnings'] },
-  { id: 'json-to-csv', Icon: Sheet, points: ['Nested objects become columns', 'Opens cleanly in Excel'] },
-  { id: 'json-to-yaml', Icon: FileCode, points: ['Clean block-style YAML', 'Quotes only what YAML needs'] },
-  { id: 'json-viewer', Icon: ListTree, points: ['Collapsible, searchable tree', 'Click to copy any path'] },
-];
+const POINTS: Partial<Record<ToolPageId, string[]>> = {
+  'diff-checker': ['Line and word level changes', 'Files of 100,000+ lines'],
+  'json-diff': ['Ignores key order and formatting', 'Every changed key and value'],
+  'json-formatter': ['2 or 4 spaces, tabs or minified', 'Sort keys A–Z'],
+  'json-validator': ['Exact line and column of errors', 'Duplicate key warnings'],
+  'json-to-csv': ['Nested objects become columns', 'Opens cleanly in Excel'],
+  'json-to-yaml': ['Clean block-style YAML', 'Quotes only what YAML needs'],
+  'json-viewer': ['Collapsible, searchable tree', 'Click to copy any path'],
+  base64: ['Text, images and files', 'UTF-8 and URL-safe'],
+  'unix-timestamp': ['Seconds to nanoseconds, auto-detected', 'Any time zone, ISO 8601'],
+  'jwt-decoder': ['Header, payload and expiry', 'Verify HS, RS, PS and ES signatures'],
+  'regex-tester': ['Live matches and capture groups', 'Replace preview, safe from hangs'],
+  'url-encoder': ['Component, full URL or form style', 'Any URL split into its parts'],
+};
 
 const IconTile: React.FC<{ Icon: typeof Check }> = ({ Icon }) => (
-  <span className="grid size-10 shrink-0 place-items-center rounded-xl border bg-card">
+  <span className="grid size-10 shrink-0 place-items-center rounded-xl border bg-background">
     <Icon className="size-[18px]" aria-hidden="true" />
   </span>
 );
 
-const Points: React.FC<{ points: string[] }> = ({ points }) => (
-  <ul className="mt-4 space-y-1.5 text-[14px] text-muted-foreground">
-    {points.map((p) => (
-      <li key={p} className="flex items-start gap-2">
-        <Check className="mt-[3px] size-3.5 shrink-0 text-add" aria-hidden="true" />
-        {p}
-      </li>
-    ))}
-  </ul>
-);
+const cardClass = 'group flex flex-col rounded-2xl border bg-card p-5 transition-colors hover:border-foreground/25';
 
-const OpenLabel: React.FC<{ name: string }> = ({ name }) => (
-  <span className="mt-6 inline-flex items-center gap-1.5 text-[14px] font-medium">
-    {/* "Open diff checker", but "Open JSON diff" */}
-    Open {/^[A-Z][a-z]/.test(name) ? name.charAt(0).toLowerCase() + name.slice(1) : name}
-    <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-  </span>
-);
-
-/** Large card with a preview, for the compare tools. */
-const FeatureCard: React.FC<{ tool: Tool }> = ({ tool }) => {
-  const page = pageById(tool.id);
+const ToolCard: React.FC<{ id: ToolPageId; group: string }> = ({ id, group }) => {
+  const page = pageById(id);
   return (
-    <a href={page.path} className="group flex flex-col rounded-2xl border bg-card p-6 transition-colors hover:border-foreground/25 sm:p-7">
-      <div className="flex items-center gap-3">
-        <IconTile Icon={tool.Icon} />
-        <h4 className="text-[20px] font-semibold tracking-[-0.02em]">{page.name}</h4>
+    <a href={page.path} className={cardClass}>
+      <div className="flex items-start justify-between gap-3">
+        <IconTile Icon={TOOL_ICONS[id]} />
+        <span className="font-mono text-[11px] text-faint">{group.toLowerCase()}</span>
       </div>
-      <p className="mt-3 text-[15px] text-muted-foreground">{page.blurb}</p>
-      <pre className="mt-5 overflow-hidden rounded-xl border bg-background py-2 font-mono text-[12.5px] leading-6" aria-hidden="true">
-        {tool.preview}
-      </pre>
-      <Points points={tool.points} />
-      <div className="mt-auto">
-        <OpenLabel name={page.name} />
-      </div>
+      <h3 className="mt-4 text-[16.5px] font-semibold tracking-[-0.015em]">{page.name}</h3>
+      <p className="mt-1 text-[14px] text-muted-foreground">{page.blurb}</p>
+      <ul className="mt-3 space-y-1 text-[13.5px] text-muted-foreground">
+        {(POINTS[id] ?? []).map((p) => (
+          <li key={p} className="flex items-start gap-2">
+            <Check className="mt-[3px] size-3.5 shrink-0 text-add" aria-hidden="true" />
+            {p}
+          </li>
+        ))}
+      </ul>
+      <span className="mt-auto inline-flex items-center gap-1.5 pt-5 text-[13.5px] font-medium">
+        Open
+        <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+      </span>
     </a>
   );
 };
-
-/** Compact card, for the JSON tools. */
-const ToolCard: React.FC<{ tool: Tool }> = ({ tool }) => {
-  const page = pageById(tool.id);
-  return (
-    <a href={page.path} className="group flex flex-col rounded-2xl border bg-card p-6 transition-colors hover:border-foreground/25">
-      <div className="flex items-center gap-3">
-        <IconTile Icon={tool.Icon} />
-        <h4 className="text-[17px] font-semibold tracking-[-0.015em]">{page.name}</h4>
-      </div>
-      <p className="mt-3 text-[14.5px] text-muted-foreground">{page.blurb}</p>
-      <Points points={tool.points} />
-      <div className="mt-auto">
-        <OpenLabel name={page.name} />
-      </div>
-    </a>
-  );
-};
-
-const GroupHeading: React.FC<{ id: string; title: string; children: React.ReactNode }> = ({ id, title, children }) => (
-  <div id={id} className="mb-5 flex scroll-mt-24 flex-wrap items-baseline gap-x-4 gap-y-1">
-    <h3 className="text-[22px] font-semibold tracking-[-0.02em]">{title}</h3>
-    <p className="text-[15px] text-muted-foreground">{children}</p>
-  </div>
-);
 
 const REASONS = [
   {
@@ -212,12 +123,12 @@ export default function HomeApp() {
               </span>
             </h1>
             <p className="mt-6 max-w-[54ch] text-[clamp(17px,2vw,19px)] text-muted-foreground">
-              Compare text and code, then format, validate, convert and explore JSON. No account, no limits, and nothing you
-              paste ever leaves your browser.
+              Compare text and JSON, format and convert JSON, decode Base64 and JWTs, convert timestamps and test regexes. No
+              account, no limits, and nothing you paste ever leaves your browser.
             </p>
             <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
               <Button asChild size="lg" className="h-11 rounded-full px-6">
-                <a href="#compare">
+                <a href="#tools">
                   Browse the tools <ArrowDown />
                 </a>
               </Button>
@@ -226,7 +137,7 @@ export default function HomeApp() {
               </Button>
             </div>
             <ul className="mt-10 flex flex-wrap justify-center gap-x-6 gap-y-2 font-mono text-[12.5px] text-muted-foreground">
-              {['7 tools', 'unlimited', 'no account', 'nothing uploaded'].map((label) => (
+              {[`${TOOL_COUNT} tools`, 'unlimited', 'no account', 'nothing uploaded'].map((label) => (
                 <li key={label} className="inline-flex items-center gap-1.5">
                   <Check className="size-3.5 text-add" aria-hidden="true" />
                   {label}
@@ -242,45 +153,48 @@ export default function HomeApp() {
           </div>
         </section>
 
-        <section id="tools" className="border-t py-20 sm:py-24" aria-label="Tools">
+        <section id="tools" className="scroll-mt-16 border-t py-20 sm:py-24">
           <div className="page">
-            <GroupHeading id="compare" title="Compare">
-              See exactly what changed between two versions.
-            </GroupHeading>
-            <div className="grid gap-4 lg:grid-cols-2">
-              {COMPARE.map((t) => (
-                <FeatureCard key={t.id} tool={t} />
-              ))}
+            <SectionTitle eyebrow="tools" title="Pick a tool.">
+              Each one runs entirely in this tab: nothing to install, nothing uploaded.
+            </SectionTitle>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {TOOL_ONLY_GROUPS.flatMap((g) => g.ids.map((id) => <ToolCard key={id} id={id} group={g.label} />))}
+              <a href={`${REPO_URL}/issues`} target="_blank" rel="noopener noreferrer" className={`${cardClass} border-dashed bg-transparent`}>
+                <IconTile Icon={Lightbulb} />
+                <h3 className="mt-4 text-[16.5px] font-semibold tracking-[-0.015em]">Missing a tool?</h3>
+                <p className="mt-1 text-[14px] text-muted-foreground">
+                  Tell us what you'd use. New tools follow the same rules: free, open source, nothing uploaded.
+                </p>
+                <span className="mt-auto inline-flex items-center gap-1.5 pt-5 text-[13.5px] font-medium">
+                  Suggest a tool
+                  <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                </span>
+              </a>
             </div>
+          </div>
+        </section>
 
-            <div className="mt-14">
-              <GroupHeading id="json" title="JSON">
-                <Braces className="mr-1.5 inline size-4 align-[-2px]" aria-hidden="true" />
-                Clean up, check, convert and explore.
-              </GroupHeading>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {JSON_TOOLS.map((t) => (
-                  <ToolCard key={t.id} tool={t} />
-                ))}
-                <a
-                  href={`${REPO_URL}/issues`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex flex-col rounded-2xl border border-dashed p-6 transition-colors hover:border-foreground/25"
-                >
-                  <div className="flex items-center gap-3">
-                    <IconTile Icon={Lightbulb} />
-                    <h4 className="text-[17px] font-semibold tracking-[-0.015em] text-muted-foreground">Missing a tool?</h4>
-                  </div>
-                  <p className="mt-3 text-[14.5px] text-muted-foreground">
-                    Tell us what you'd use. New tools follow the same rules: free, open source, nothing uploaded.
-                  </p>
-                  <span className="mt-auto inline-flex items-center gap-1.5 pt-6 text-[14px] font-medium">
-                    Suggest a tool
-                    <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-                  </span>
-                </a>
-              </div>
+        <section id="guides" className="scroll-mt-16 border-t py-20 sm:py-24">
+          <div className="page">
+            <SectionTitle eyebrow="guides" title="Do it right the first time.">
+              Short, practical guides to the jobs these tools are for.
+            </SectionTitle>
+            <div className="grid gap-4 md:grid-cols-2">
+              {GUIDES.map((id) => {
+                const page = pageById(id);
+                return (
+                  <a key={id} href={page.path} className={cardClass}>
+                    <IconTile Icon={TOOL_ICONS[id]} />
+                    <h3 className="mt-4 text-[18px] font-semibold tracking-[-0.015em]">{page.title}</h3>
+                    <p className="mt-1.5 text-[14.5px] text-muted-foreground">{page.description}</p>
+                    <span className="mt-auto inline-flex items-center gap-1.5 pt-5 text-[13.5px] font-medium">
+                      Read the guide
+                      <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                    </span>
+                  </a>
+                );
+              })}
             </div>
           </div>
         </section>

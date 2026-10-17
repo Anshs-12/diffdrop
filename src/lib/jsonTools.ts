@@ -1,6 +1,6 @@
 /** Conversions and summaries behind the JSON tool pages. */
 
-import { isContainer, isJsonNumber } from './jsonValue';
+import { isContainer, isJsonNumber, stringify } from './jsonValue';
 
 export type Indent = 2 | 4 | 'tab' | 'minify';
 
@@ -17,8 +17,8 @@ function sortKeysDeep(value: unknown): unknown {
 /** Re-serialize a parsed JSON value with the chosen indentation (and optionally sorted keys). */
 export function stringifyJson(value: unknown, indent: Indent, sort: boolean): string {
   const v = sort ? sortKeysDeep(value) : value;
-  if (indent === 'minify') return JSON.stringify(v);
-  return JSON.stringify(v, null, indent === 'tab' ? '\t' : indent) + '\n';
+  if (indent === 'minify') return stringify(v);
+  return stringify(v, indent === 'tab' ? '\t' : indent) + '\n';
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -93,7 +93,7 @@ function cell(value: unknown, delimiter: Delimiter, escapeFormulas: boolean): st
   if (value === null || value === undefined) text = '';
   else if (typeof value === 'string') text = escapeFormulas && /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
   else if (isJsonNumber(value)) text = value.source;
-  else if (typeof value === 'object') text = JSON.stringify(value);
+  else if (typeof value === 'object') text = stringify(value);
   else text = String(value);
   // RFC 4180: quote cells containing the delimiter, quotes or line breaks; double inner quotes
   return text.includes(delimiter) || /["\r\n]/.test(text) || /^\s|\s$/.test(text)

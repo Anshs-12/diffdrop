@@ -4,21 +4,19 @@
  * keys the browser reorders, and numbers it would round.
  */
 
-type RawJson = (text: string) => unknown;
-const rawJSON = (JSON as unknown as { rawJSON?: RawJson }).rawJSON;
-
 /**
  * A number whose JSON text a JS number can't reproduce: big integers
  * (12345678901234567890), trailing zeros (1.0), exponents (1e5) and -0.
- * Serializes back to its original text.
+ * Write values containing these with `stringify`, which keeps the original text.
  */
 export class JsonNumber {
   constructor(readonly source: string) {}
   toString() {
     return this.source;
   }
+  /** Plain JSON.stringify falls back to the nearest JS number; `stringify` keeps it exact. */
   toJSON() {
-    return rawJSON ? rawJSON(this.source) : Number(this.source);
+    return Number(this.source);
   }
 }
 
@@ -27,32 +25,117 @@ export const isJsonNumber = (v: unknown): v is JsonNumber => v instanceof JsonNu
 /** Objects and arrays (not JsonNumber). */
 export const isContainer = (v: unknown): v is object => v !== null && typeof v === 'object' && !(v instanceof JsonNumber);
 
-/** Whether this browser exposes each number's source text to JSON.parse and has JSON.rawJSON (ES2025). */
-export const LOSSLESS: boolean = (() => {
-  if (typeof rawJSON !== 'function') return false;
+/** Whether JSON.parse gives revivers each number's source text (ES2025); otherwise parseJson uses a fallback. */
+export const SOURCE_ACCESS: boolean = (() => {
   try {
     let source: string | undefined;
     JSON.parse('1.0', (_k, v, ctx?: { source?: string }) => {
       source = ctx?.source;
       return v;
     });
-    return source === '1.0' && JSON.stringify([rawJSON('1.0')]) === '[1.0]';
+    return source === '1.0';
   } catch {
     return false;
   }
 })();
 
+/** Whether a number token reads back as the same text from a JS number. */
+const exact = (token: string) => String(Number(token)) === token;
+
+/** A placeholder no real string will match: a private-use character plus a random tag. */
+const placeholderTag = () => `\uE000${Math.random().toString(36).slice(2, 10)}:`;
+
 /** JSON.parse, but numbers that would change (1.0, 1e5, big integers) become JsonNumber. */
 export function parseJson(text: string): unknown {
-  if (!LOSSLESS) return JSON.parse(text);
+  if (!SOURCE_ACCESS) return parseWithPlaceholders(text);
   try {
     return JSON.parse(text, (_k, v, ctx?: { source?: string }) =>
       typeof v === 'number' && ctx?.source !== undefined && ctx.source !== String(v) ? new JsonNumber(ctx.source) : v,
     );
   } catch (e) {
-    // Extremely deep documents can overflow the reviver; plain parsing still works
-    if (e instanceof RangeError) return JSON.parse(text);
+    // Extremely deep documents can overflow the reviver
+    if (e instanceof RangeError) return parseWithPlaceholders(text);
     throw e;
+  }
+}
+
+/**
+ * For browsers without source access: swap each inexact number token for a
+ * placeholder string, parse, then turn the placeholders into JsonNumber.
+ */
+export function parseWithPlaceholders(text: string): unknown {
+  const tag = placeholderTag();
+  const sources: string[] = [];
+  let out = '';
+  let last = 0;
+  const n = text.length;
+  let i = 0;
+  while (i < n) {
+    const c = text.charCodeAt(i);
+    if (c === 0x22 /* " */) {
+      i = closingQuote(text, i) + 1;
+    } else if (c === 0x2d /* - */ || (c >= 0x30 && c <= 0x39)) {
+      let j = i + 1;
+      while (j < n && /[0-9eE.+-]/.test(text[j]!)) j++;
+      const token = text.slice(i, j);
+      if (!exact(token)) {
+        out += `${text.slice(last, i)}"${tag}${sources.length}"`;
+        sources.push(token);
+        last = j;
+      }
+      i = j;
+    } else {
+      i++;
+    }
+  }
+  const value = JSON.parse(out + text.slice(last)) as unknown;
+  if (!sources.length) return value;
+
+  const restore = (v: unknown) => (typeof v === 'string' && v.startsWith(tag) ? new JsonNumber(sources[Number(v.slice(tag.length))]!) : v);
+  const stack: unknown[] = [value];
+  while (stack.length) {
+    const v = stack.pop();
+    if (Array.isArray(v)) {
+      for (let k = 0; k < v.length; k++) {
+        v[k] = restore(v[k]);
+        if (isContainer(v[k])) stack.push(v[k]);
+      }
+    } else if (isContainer(v)) {
+      const o = v as Record<string, unknown>;
+      for (const key of Object.keys(o)) {
+        o[key] = restore(o[key]);
+        if (isContainer(o[key])) stack.push(o[key]);
+      }
+    }
+  }
+  return restore(value);
+}
+
+/** JSON.stringify that writes JsonNumber values exactly as they were written. */
+export function stringify(value: unknown, space?: string | number): string {
+  const tag = placeholderTag();
+  const sources: string[] = [];
+  const out = JSON.stringify(
+    value,
+    function (this: Record<string, unknown>, key, v: unknown) {
+      const raw = this[key];
+      return raw instanceof JsonNumber ? `${tag}${sources.push(raw.source) - 1}` : v;
+    },
+    space,
+  );
+  if (!sources.length) return out;
+  return out.replace(new RegExp(`"${tag}(\\d+)"`, 'g'), (_, k: string) => sources[Number(k)]!);
+}
+
+/** Index of the quote that closes the string starting at `start` (one not escaped by a backslash). */
+function closingQuote(text: string, start: number): number {
+  let q = start;
+  for (;;) {
+    q = text.indexOf('"', q + 1);
+    if (q === -1) return text.length;
+    let b = q - 1;
+    while (text.charCodeAt(b) === 0x5c) b--;
+    if ((q - 1 - b) % 2 === 0) return q;
   }
 }
 
@@ -73,10 +156,6 @@ export interface JsonScan {
   duplicateCount: number;
   /** Whether some object has number-like keys ("1", "20") that JS objects move to the front. */
   reorderedKeys: boolean;
-  /** Numbers that JS numbers can't represent exactly (only counted when parsing isn't lossless). */
-  roundedNumbers: number;
-  /** First rounded number, as written. */
-  roundedExample: string | null;
 }
 
 const MAX_REPORTED = 20;
@@ -85,7 +164,7 @@ const INDEX_KEY = /^(0|[1-9]\d{0,9})$/;
 
 /** Scan valid JSON text (call only after it parsed). */
 export function scanJson(text: string): JsonScan {
-  const out: JsonScan = { duplicates: [], duplicateCount: 0, reorderedKeys: false, roundedNumbers: 0, roundedExample: null };
+  const out: JsonScan = { duplicates: [], duplicateCount: 0, reorderedKeys: false };
   // One entry per open object (null for arrays)
   const stack: ({ keys: Set<string>; lastIndex: number; sawOther: boolean } | null)[] = [];
   const n = text.length;
@@ -102,14 +181,7 @@ export function scanJson(text: string): JsonScan {
       stack.pop();
       i++;
     } else if (c === 0x22 /* " */) {
-      // Find the closing quote (one not preceded by an odd number of backslashes)
-      let q = i;
-      for (;;) {
-        q = text.indexOf('"', q + 1);
-        let b = q - 1;
-        while (text.charCodeAt(b) === 0x5c) b--;
-        if ((q - 1 - b) % 2 === 0) break;
-      }
+      const q = closingQuote(text, i);
       const top = stack[stack.length - 1];
       let j = q + 1;
       while (j < n && (text[j] === ' ' || text[j] === '\t' || text[j] === '\n' || text[j] === '\r')) j++;
@@ -132,28 +204,13 @@ export function scanJson(text: string): JsonScan {
       }
       i = q + 1;
     } else if (c === 0x2d /* - */ || (c >= 0x30 && c <= 0x39)) {
+      // Skip numbers whole, so their digits aren't mistaken for anything else
       let j = i + 1;
       while (j < n && /[0-9eE.+-]/.test(text[j]!)) j++;
-      if (!LOSSLESS) {
-        const token = text.slice(i, j);
-        if (!sameNumber(token)) {
-          out.roundedNumbers++;
-          out.roundedExample ??= token;
-        }
-      }
       i = j;
     } else {
       i++;
     }
   }
   return out;
-}
-
-/** Whether a JSON number token survives a round trip through a JS number (formatting like 1.0 vs 1 aside). */
-function sameNumber(token: string): boolean {
-  const value = Number(token);
-  if (!Number.isFinite(value)) return false;
-  // Significant digits only; toExponential() gives the shortest exact digits of a double
-  const sig = (s: string) => s.replace(/[eE].*$/, '').replace(/[-.]/g, '').replace(/^0+/, '').replace(/0+$/, '') || '0';
-  return sig(token) === sig(Math.abs(value).toExponential());
 }

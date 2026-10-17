@@ -41,7 +41,7 @@ export interface ToolContent {
   faq: { q: string; a: string }[];
 }
 
-type ToolId = Exclude<PageId, 'home' | 'diff-checker' | 'json-diff'>;
+export type ToolId = Exclude<PageId, 'home' | 'diff-checker' | 'json-diff' | 'guide-compare-json' | 'guide-json-to-csv'>;
 
 export const TOOL_CONTENT: Record<ToolId, ToolContent> = {
   'json-formatter': {
@@ -87,7 +87,7 @@ export const TOOL_CONTENT: Record<ToolId, ToolContent> = {
     faq: [
       { q: 'How are nested objects handled?', a: 'They are flattened into dotted column names: {"address": {"city": "London"}} becomes a column address.city.' },
       { q: 'What about arrays inside objects?', a: 'They are written into a single cell as JSON text (for example ["admin","editor"]), so no data is lost.' },
-      { q: 'Will Excel open it correctly?', a: 'Yes. Downloads start with a UTF-8 byte order mark, so accented letters and emoji show correctly in Excel. Turn on Escape formulas if the data came from someone else: cells starting with = + - or @ then can’t run as formulas.' },
+      { q: 'Will Excel open it correctly?', a: 'Yes. Downloads start with a UTF-8 byte order mark, so accented letters and emoji show correctly in Excel. Escape formulas is on by default, so cells starting with = + - or @ can’t run as formulas; turn it off if you need those cells exactly as they are.' },
       { q: 'Is my data uploaded?', a: 'No. The conversion runs in this tab; your data never leaves your browser.' },
     ],
   },
@@ -117,6 +117,81 @@ export const TOOL_CONTENT: Record<ToolId, ToolContent> = {
       { q: 'How big a file can it open?', a: 'Large ones. Only expanded branches are rendered, so a file with hundreds of thousands of values still opens instantly.' },
       { q: 'What does the path look like?', a: 'JavaScript style: $.users[0].address.city, with ["odd key"] for keys that contain spaces or symbols.' },
       { q: 'Is my JSON sent anywhere?', a: 'No. Everything happens in this tab.' },
+    ],
+  },
+  base64: {
+    h1: 'Base64 encode and decode',
+    lede: 'Turn text or a file into Base64, or Base64 back into text, an image or a file. Handles UTF-8, the URL-safe alphabet and missing padding. Runs in your browser.',
+    steps: [
+      { title: 'Pick encode or decode', body: 'Encode turns text into Base64. Decode turns Base64 back into text, or into a file if it holds binary data like an image or PDF.' },
+      { title: 'Paste text or open a file', body: 'Any size works. Files are read on your machine and never uploaded. Decoding accepts data: URLs, line breaks and both alphabets.' },
+      { title: 'Copy or download', body: 'Images show a preview, other binary data a hex view with a download button. Errors point at the exact character.' },
+    ],
+    faq: [
+      { q: 'What is Base64?', a: 'A way to write any bytes using only 64 safe characters (A–Z, a–z, 0–9, + and /), so binary data can travel through text: JSON, email, URLs, data: URLs and HTTP headers. It is an encoding, not encryption: anyone can decode it.' },
+      { q: 'What is URL-safe Base64?', a: 'The same encoding with - and _ instead of + and /, usually without = padding (RFC 4648 §5). JWTs and many URLs use it. Decoding here accepts both automatically.' },
+      { q: 'Why is my decoded text garbled?', a: 'Either the data isn’t text (an image or a zip, for example), or the text was encoded from something other than UTF-8. Binary data is shown as a hex view with a download instead.' },
+      { q: 'Is my data uploaded?', a: 'No. Encoding and decoding happen in this tab; the page is blocked from sending anything to a server.' },
+    ],
+  },
+  'unix-timestamp': {
+    h1: 'Unix timestamp converter',
+    lede: 'Convert epoch time to a readable date and back. Seconds, milliseconds, microseconds and nanoseconds are detected automatically, in any time zone. Runs in your browser.',
+    steps: [
+      { title: 'Paste a timestamp or a date', body: '1760700000, 1760700000000, 2026-10-17T12:00:00Z or Sat, 17 Oct 2026 12:00:00 GMT all work. The unit is detected from the number’s size.' },
+      { title: 'Read every format at once', body: 'UTC and local time, ISO 8601, RFC 2822, relative time, the weekday, ISO week and day of the year, plus the timestamp in every unit.' },
+      { title: 'Pick a time zone or copy', body: 'Show the date in any time zone. Each value has a copy button; the live clock at the top gives the current timestamp.' },
+    ],
+    faq: [
+      { q: 'What is a Unix timestamp?', a: 'The number of seconds since 1 January 1970 00:00:00 UTC (the Unix epoch), ignoring leap seconds. It is the same everywhere in the world, which is why systems store time this way.' },
+      { q: 'Seconds or milliseconds?', a: 'Unix tools and most APIs use seconds (10 digits today); JavaScript’s Date.now() and Java use milliseconds (13 digits). Microseconds (16) and nanoseconds (19) appear in databases and tracing. The converter detects which one you pasted.' },
+      { q: 'What is the year 2038 problem?', a: 'Systems that store seconds in a signed 32-bit integer overflow on 19 January 2038 at 03:14:07 UTC (timestamp 2147483647). 64-bit timestamps, used here, run for billions of years.' },
+      { q: 'Is anything sent to a server?', a: 'No. All conversion uses your browser’s own clock and time zone data.' },
+    ],
+  },
+  'jwt-decoder': {
+    h1: 'JWT decoder',
+    lede: 'Paste a JSON Web Token to read its header and payload, see when it expires, and verify its signature with a secret or a public key. Your token never leaves your browser.',
+    steps: [
+      { title: 'Paste the token', body: 'The whole eyJ… string, with or without "Bearer ". Header and payload are decoded as you paste, each claim labelled.' },
+      { title: 'Check the dates', body: 'Issued at, not before and expiry are shown as dates, with whether the token is valid right now.' },
+      { title: 'Verify the signature', body: 'Enter the secret for HS256/384/512, or a PEM or JWK public key for RS, PS, ES and EdDSA. Verification uses your browser’s built-in crypto.' },
+    ],
+    faq: [
+      { q: 'Is it safe to paste a real token?', a: 'Here, yes: decoding and verification run entirely in this tab, and the page is blocked from making network requests. Still, treat live tokens like passwords and prefer expired or test ones when you can.' },
+      { q: 'Does decoding prove a token is genuine?', a: 'No. Anyone can decode a JWT; the payload is only Base64url, not encrypted. Only verifying the signature with the right key shows it hasn’t been tampered with.' },
+      { q: 'Which algorithms can it verify?', a: 'HS256, HS384 and HS512 with a shared secret; RS256/384/512, PS256/384/512 and ES256/384/512 with a public key in PEM or JWK form; and EdDSA (Ed25519) in browsers that support it.' },
+      { q: 'Can it decode encrypted tokens (JWE)?', a: 'No. Encrypted tokens have five parts and need the private key to read; this tool decodes signed tokens (JWS), the common kind.' },
+    ],
+  },
+  'regex-tester': {
+    h1: 'Regex tester',
+    lede: 'Write a regular expression and see every match highlighted as you type, with capture groups, named groups and a replace preview. Uses JavaScript’s regex engine, in your browser.',
+    steps: [
+      { title: 'Write the pattern', body: 'Type it without slashes and switch flags on or off: global, ignore case, multiline, dot-all, unicode and sticky. Syntax errors are explained as you type.' },
+      { title: 'Paste test text', body: 'Matches are highlighted in place and listed below with their position and every capture group, numbered and named.' },
+      { title: 'Try a replacement', body: 'Use $1, $<name> and $& to preview what String.replace would produce, then copy the result.' },
+    ],
+    faq: [
+      { q: 'Which regex flavor is this?', a: 'JavaScript (ECMAScript), as in Chrome, Node.js and every browser. It is close to PCRE for everyday patterns; lookbehind, named groups and \\p{…} Unicode classes all work.' },
+      { q: 'Why does my pattern freeze other testers?', a: 'Patterns like (a+)+$ can take exponential time on some inputs (catastrophic backtracking). Here the regex runs in a background worker and is stopped after 1.5 seconds, so the page stays responsive and you’re told why.' },
+      { q: 'How many matches are shown?', a: 'Up to 10,000, which is enough for any text you’d check by eye. The count tells you if there are more.' },
+      { q: 'Is my text uploaded?', a: 'No. Matching happens in this tab.' },
+    ],
+  },
+  'url-encoder': {
+    h1: 'URL encoder and decoder',
+    lede: 'Percent-encode text for a URL or decode %20-style escapes back to text. Component, full-URL and form styles, with any URL broken into its parts. Runs in your browser.',
+    steps: [
+      { title: 'Pick encode or decode', body: 'Encode makes text safe to put in a URL; decode turns %-escapes back into readable text.' },
+      { title: 'Choose the style', body: 'Component for a single query value or path segment, Full URL to keep : / ? # & intact, or Form for HTML form data where spaces become +.' },
+      { title: 'Inspect the URL', body: 'Paste a full URL to see its protocol, host, port, path, hash and every query parameter decoded in a table.' },
+    ],
+    faq: [
+      { q: 'encodeURIComponent or encodeURI?', a: 'Use component (encodeURIComponent) for a piece of a URL, like a query value: it escapes & = ? / and #. Use full URL (encodeURI) for a complete address, which must keep those characters.' },
+      { q: 'Why do spaces become + sometimes and %20 other times?', a: 'HTML forms send data as application/x-www-form-urlencoded, where a space is +. Everywhere else in a URL a space is %20. Pick Form or Component to match what you’re working with.' },
+      { q: 'Why does decoding fail?', a: 'A % must be followed by two hex digits, and the bytes must form valid UTF-8. The error says exactly which escape is wrong.' },
+      { q: 'Is anything sent anywhere?', a: 'No. Encoding, decoding and parsing all happen in this tab.' },
     ],
   },
 };

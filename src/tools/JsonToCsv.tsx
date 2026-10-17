@@ -17,7 +17,8 @@ const DELIMITERS: { value: Delimiter; label: string; id: string }[] = [
 export default function JsonToCsv() {
   const { text, setText, parsed } = useJsonInput();
   const [delimiter, setDelimiter] = useState<Delimiter>(',');
-  const [escapeFormulas, setEscapeFormulas] = useState(false);
+  // On by default: a cell like =HYPERLINK(...) from untrusted data would run when the CSV is opened
+  const [escapeFormulas, setEscapeFormulas] = useState(true);
   const inputRef = useRef<CodeEditorHandle>(null);
 
   const result = useMemo(

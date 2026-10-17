@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 import { PAGES, REPO_URL, type PageId } from '@/site';
 import { GitHubIcon, LogoMark } from './Icons';
 
@@ -74,17 +75,19 @@ interface SiteHeaderProps {
   /** The page being shown, marked in the tools menu. */
   current: PageId;
   sections?: HeaderSection[];
+  /** Tool pages: full width to line up with the sidebar, which replaces the nav on large screens. */
+  app?: boolean;
   theme: ThemeChoice;
   onThemeChange: (choice: ThemeChoice) => void;
 }
 
-const SiteHeader: React.FC<SiteHeaderProps> = ({ current, sections = DIFF_SECTIONS, theme, onThemeChange }) => {
+const SiteHeader: React.FC<SiteHeaderProps> = ({ current, sections = DIFF_SECTIONS, app = false, theme, onThemeChange }) => {
   const ids = useMemo(() => sections.map((s) => s.id), [sections]);
   const active = useActiveSection(ids);
 
   return (
     <header className="site-header">
-      <div className="page flex h-16 items-center gap-4">
+      <div className={cn(app ? 'page-wide' : 'page', 'flex h-16 items-center gap-4')}>
         <a
           href={current === 'home' ? '#top' : '/'}
           className="flex items-center gap-2.5"
@@ -110,7 +113,17 @@ const SiteHeader: React.FC<SiteHeaderProps> = ({ current, sections = DIFF_SECTIO
           </TooltipContent>
         </Tooltip>
 
-        <nav className="ml-auto hidden items-center gap-1 md:flex" aria-label="Sections">
+        <a
+          href={REPO_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="-ml-2 hidden h-7 items-center gap-1.5 rounded-full border px-3 font-mono text-[11.5px] text-foreground transition-colors hover:bg-muted sm:inline-flex"
+        >
+          <GitHubIcon className="size-3" />
+          open source
+        </a>
+
+        <nav className={cn('ml-auto hidden items-center gap-1', !app && 'md:flex')} aria-label="Sections">
           {sections.map(({ id, label }) => (
             <Button
               key={id}
@@ -138,7 +151,7 @@ const SiteHeader: React.FC<SiteHeaderProps> = ({ current, sections = DIFF_SECTIO
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button asChild variant="outline" size="icon-sm" className="ml-auto bg-card md:ml-2">
+            <Button asChild variant="outline" size="icon-sm" className={cn('ml-auto bg-card', !app && 'md:ml-2')}>
               <a href={REPO_URL} target="_blank" rel="noopener noreferrer" aria-label="diffdrop on GitHub">
                 <GitHubIcon className="size-4" />
               </a>
@@ -170,18 +183,22 @@ const SiteHeader: React.FC<SiteHeaderProps> = ({ current, sections = DIFF_SECTIO
 
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon-sm" className="-ml-2 bg-card md:hidden" aria-label="Menu">
+            <Button variant="outline" size="icon-sm" className={cn('-ml-2 bg-card', app ? 'lg:hidden' : 'md:hidden')} aria-label="Menu">
               <Menu />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="max-h-[80svh] w-72 overflow-y-auto">
-            <DropdownMenuLabel className="font-mono text-xs font-normal text-muted-foreground">on this page</DropdownMenuLabel>
-            {sections.map(({ id, label }) => (
-              <DropdownMenuItem key={id} asChild>
-                <a href={`#${id}`}>{label}</a>
-              </DropdownMenuItem>
-            ))}
-            <DropdownMenuSeparator />
+            {sections.length > 0 && (
+              <>
+                <DropdownMenuLabel className="font-mono text-xs font-normal text-muted-foreground">on this page</DropdownMenuLabel>
+                {sections.map(({ id, label }) => (
+                  <DropdownMenuItem key={id} asChild>
+                    <a href={`#${id}`}>{label}</a>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+              </>
+            )}
             <DropdownMenuLabel className="font-mono text-xs font-normal text-muted-foreground">tools</DropdownMenuLabel>
             <ToolItems current={current} />
           </DropdownMenuContent>

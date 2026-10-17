@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import { EditorState, StateEffect, StateField, type Extension, type Range } from '@codemirror/state';
+import { Compartment, EditorState, StateEffect, StateField, type Extension, type Range } from '@codemirror/state';
 import {
   Decoration,
   EditorView,
@@ -30,6 +30,10 @@ interface CodeEditorProps {
   placeholder?: string;
   ariaLabel: string;
   className?: string;
+  /** Ranges to highlight (e.g. regex matches), sorted by start; alternate ones get a second color. */
+  highlights?: readonly { from: number; to: number }[] | null;
+  /** Wrap long lines (for one-line content like tokens, URLs and Base64). */
+  wrap?: boolean;
 }
 
 const setError = StateEffect.define<number | null>();
@@ -50,6 +54,16 @@ const langField = StateField.define<Lang | null>({
   },
 });
 
+const setHighlights = StateEffect.define<readonly { from: number; to: number }[] | null>();
+const highlightField = StateField.define<readonly { from: number; to: number }[] | null>({
+  create: () => null,
+  update(v, tr) {
+    for (const e of tr.effects) if (e.is(setHighlights)) return e.value;
+    return tr.docChanged ? null : v;
+  },
+});
+const matchDeco = [Decoration.mark({ class: 'cm-match' }), Decoration.mark({ class: 'cm-match cm-match-alt' })];
+
 const errorLineDeco = Decoration.line({ class: 'cm-error-line' });
 const markCache: Record<string, Decoration> = {};
 const mark = (cls: string) => (markCache[cls] ??= Decoration.mark({ class: cls }));
@@ -66,6 +80,7 @@ const decorations = ViewPlugin.fromClass(
         u.docChanged ||
         u.viewportChanged ||
         u.startState.field(errorField) !== u.state.field(errorField) ||
+        u.startState.field(highlightField) !== u.state.field(highlightField) ||
         u.startState.field(langField) !== u.state.field(langField)
       ) {
         this.decorations = this.build(u.view);
@@ -76,6 +91,23 @@ const decorations = ViewPlugin.fromClass(
       const error = view.state.field(errorField);
       const doc = view.state.doc;
       const out: Range<Decoration>[] = [];
+      const highlights = view.state.field(highlightField);
+      if (highlights) {
+        // Only the matches in view; ranges are sorted, so binary-search the first
+        for (const { from, to } of view.visibleRanges) {
+          let lo = 0;
+          let hi = highlights.length;
+          while (lo < hi) {
+            const mid = (lo + hi) >> 1;
+            if (highlights[mid]!.to < from) lo = mid + 1;
+            else hi = mid;
+          }
+          for (let k = lo; k < highlights.length && highlights[k]!.from <= to; k++) {
+            const h = highlights[k]!;
+            if (h.to > h.from && h.to <= doc.length) out.push(matchDeco[k % 2]!.range(h.from, h.to));
+          }
+        }
+      }
       for (const { from, to } of view.visibleRanges) {
         for (let n = doc.lineAt(from).number; n <= doc.lineAt(to).number; n++) {
           const line = doc.line(n);
@@ -115,13 +147,16 @@ const LARGE_INSERT_LINES = 2_000;
 
 /** A CodeMirror editor for the JSON tools: input (editable) or output (read-only). */
 const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
-  ({ value, onChange, readOnly = false, lang, errorLine = null, placeholder, ariaLabel, className }, ref) => {
+  ({ value, onChange, readOnly = false, lang, errorLine = null, placeholder, ariaLabel, className, highlights = null, wrap = false }, ref) => {
     const hostRef = useRef<HTMLDivElement>(null);
     const viewRef = useRef<EditorView | null>(null);
     const lastValue = useRef(value);
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
     const extensionsRef = useRef<Extension[]>([]);
+    // The label can change when one editor shows different things (encode vs decode output)
+    const labelRef = useRef(new Compartment());
+    const labelAttrs = (label: string) => EditorView.contentAttributes.of({ 'aria-label': label, spellcheck: 'false', autocorrect: 'off' });
 
     useEffect(() => {
       const emit = (text: string) => {
@@ -134,9 +169,11 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
         search({ top: true }),
         keymap.of([...searchKeymap, ...defaultKeymap, ...historyKeymap]),
         EditorState.readOnly.of(readOnly),
-        EditorView.contentAttributes.of({ 'aria-label': ariaLabel, spellcheck: 'false', autocorrect: 'off' }),
+        ...(wrap ? [EditorView.lineWrapping] : []),
+        labelRef.current.of(labelAttrs(ariaLabel)),
         ...(placeholder ? [placeholderExt(placeholder)] : []),
         errorField,
+        highlightField,
         langField,
         decorations,
         theme,
@@ -190,6 +227,17 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
     useEffect(() => {
       viewRef.current?.dispatch({ effects: setError.of(errorLine) });
     }, [errorLine]);
+
+    useEffect(() => {
+      viewRef.current?.dispatch({ effects: labelRef.current.reconfigure(labelAttrs(ariaLabel)) });
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ariaLabel]);
+
+    useEffect(() => {
+      const view = viewRef.current;
+      // Ranges computed for an older text are dropped rather than drawn in the wrong place
+      if (view && value === view.state.doc.toString()) view.dispatch({ effects: setHighlights.of(highlights) });
+    }, [highlights, value]);
 
     useImperativeHandle(ref, () => ({
       goToLine(line: number, column = 1) {
