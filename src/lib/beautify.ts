@@ -95,7 +95,7 @@ export const EXAMPLES: Record<CodeLang, string> = {
   shell: '#!/bin/bash\nfor f in *.log;do\nif [ -s "$f" ];then\necho "$f has $(wc -l < "$f") lines"\nelse\nrm "$f"\nfi\ndone',
   html: '<!doctype html><html><head><title>Demo</title><style>body{font-family:sans-serif;margin:0}</style></head><body><nav><ul><li><a href="/">Home</a></li><li><a href="/about">About</a></li></ul></nav><main><h1>Hello</h1><p>Some <b>text</b>.</p></main></body></html>',
   css: '.card{display:flex;gap:8px;padding:16px;border-radius:12px}.card:hover{box-shadow:0 2px 8px rgba(0,0,0,.1)}@media (max-width:600px){.card{flex-direction:column}}',
-  json: '{"name":"diffdrop","version":"1.0.0","scripts":{"dev":"vite","build":"vite build"},"tags":["tools","json"],"config":{"port":8080,"debug":false}}',
+  json: '{"name":"toolspace","version":"1.0.0","scripts":{"dev":"vite","build":"vite build"},"tags":["tools","json"],"config":{"port":8080,"debug":false}}',
   yaml: 'name:   app\nservices:\n    web:\n      image:  nginx:1.27\n      ports: [ "80:80" ]\n    db:\n        image: postgres:16\n        environment:\n              POSTGRES_PASSWORD:   example',
   xml: '<?xml version="1.0"?><catalog><book id="1"><title>Dune</title><author>Frank Herbert</author></book><book id="2"><title>Emma</title><author>Jane Austen</author></book></catalog>',
   markdown: '#  Project\nSome *intro* text.\n* one\n* two\n    * nested\n\n|a|b|\n|-|-|\n|1|2|',

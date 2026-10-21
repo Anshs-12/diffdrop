@@ -9,10 +9,10 @@ import CodeEditor from './CodeEditor';
 import { OutputActions, Panel, StatusLine } from './shared';
 import ToolBar from './ToolBar';
 
-/** An HS256 example signed with the secret "diffdrop-secret" (iat 2026-10-17, exp 2099). */
+/** An HS256 example signed with the secret "toolspace-secret" (iat 2026-10-17, exp 2099). */
 const EXAMPLE =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzQyIiwibmFtZSI6IkFkYSBMb3ZlbGFjZSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc2MDcwMDAwMCwiZXhwIjo0MDcwOTA4ODAwfQ.Xu2SOtCgFuK26DbtZiyUlZW8e_wXtcvTJ3MywS175J8';
-export const EXAMPLE_SECRET = 'diffdrop-secret';
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzQyIiwibmFtZSI6IkFkYSBMb3ZlbGFjZSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc2MDcwMDAwMCwiZXhwIjo0MDcwOTA4ODAwfQ.UON4NpPPOt5_shcUevA3ID7eKc1GQmptFnVgCDcN5Lc';
+export const EXAMPLE_SECRET = 'toolspace-secret';
 
 const pretty = (text: string) => {
   try {

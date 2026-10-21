@@ -40,7 +40,7 @@ export function renderCart(items, coupon) {
 
 /** JSON example for the /json-diff page: keys reordered, values changed, a key added and removed. */
 export const SAMPLE_JSON_ORIGINAL = `{
-  "name": "diffdrop",
+  "name": "toolspace",
   "version": "1.4.0",
   "private": true,
   "scripts": {
@@ -55,5 +55,5 @@ export const SAMPLE_JSON_ORIGINAL = `{
 }
 `;
 
-export const SAMPLE_JSON_CHANGED = `{"name":"diffdrop","private":true,"version":"1.5.0","scripts":{"build":"tsc -b && vite build","dev":"vite","test":"vitest run"},"dependencies":{"lz-string":"^1.5.0","react":"^19.1.0","@codemirror/view":"^6.43.0"}}
+export const SAMPLE_JSON_CHANGED = `{"name":"toolspace","private":true,"version":"1.5.0","scripts":{"build":"tsc -b && vite build","dev":"vite","test":"vitest run"},"dependencies":{"lz-string":"^1.5.0","react":"^19.1.0","@codemirror/view":"^6.43.0"}}
 `;

@@ -4,7 +4,7 @@ import { editorText, fillEditors, trackErrors } from './helpers';
 test.describe('search and sharing', () => {
   test('home page has a descriptive title, canonical URL and preview card', async ({ page }) => {
     await page.goto('/');
-    await expect(page).toHaveTitle('diffdrop - free, open source developer tools');
+    await expect(page).toHaveTitle('toolspace - free, open source developer tools');
     const meta = (sel: string) => page.locator(sel).first().getAttribute('content');
     expect(await meta('meta[name="description"]')).toContain('Free, open source developer tools');
     expect(await page.locator('link[rel="canonical"]').getAttribute('href')).toMatch(/^https:\/\/.+\/$/);
@@ -40,7 +40,7 @@ test.describe('search and sharing', () => {
     const footer = page.getByRole('navigation', { name: 'Footer' });
     await expect(footer.getByRole('link', { name: 'report a bug / request a feature' })).toHaveAttribute('href', /github\.com\/.+\/issues$/);
     await expect(footer.getByRole('link', { name: 'GitHub' })).toHaveAttribute('target', '_blank');
-    await expect(page.getByRole('link', { name: 'diffdrop on GitHub' })).toHaveAttribute('rel', 'noopener noreferrer');
+    await expect(page.getByRole('link', { name: 'toolspace on GitHub' })).toHaveAttribute('rel', 'noopener noreferrer');
     await expect(page.getByRole('banner').getByRole('link', { name: 'open source', exact: true })).toHaveAttribute('href', /github\.com\/Anshs-12\/diffdrop$/);
     await expect(page.getByRole('heading', { level: 1 }).getByRole('link', { name: 'Open source.' })).toHaveAttribute('href', /github\.com\/Anshs-12\/diffdrop$/);
     await expect(page.getByRole('navigation', { name: 'Tools' }).getByRole('link', { name: 'JSON diff' })).toHaveAttribute('href', '/json-diff/');
@@ -61,7 +61,7 @@ test.describe('search and sharing', () => {
     await tools.getByRole('link', { name: /JSON viewer/ }).click();
     await expect(page).toHaveURL(/\/json-viewer\/$/);
     // The logo leads back home
-    await page.getByRole('link', { name: 'diffdrop home' }).click();
+    await page.getByRole('link', { name: 'toolspace home' }).click();
     await expect(page).toHaveURL(/\/$/);
     expect(errors).toEqual([]);
   });

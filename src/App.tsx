@@ -45,7 +45,7 @@ function isTypingTarget(el: EventTarget | null): boolean {
 const notify = (message: string) => toast(message);
 
 /**
- * Where this copy of diffdrop is served from, read at runtime so it follows whatever
+ * Where this copy of toolspace is served from, read at runtime so it follows whatever
  * domain the site is deployed on. The #fragment (shared texts) is never included.
  */
 function siteUrl(): string {
@@ -606,7 +606,7 @@ const App: React.FC<{ variant: Variant }> = ({ variant }) => {
             header={
               <div className="print-brand">
                 <span className="print-brand-name">
-                  <LogoMark size={20} /> diffdrop
+                  <LogoMark size={20} /> toolspace
                 </span>
                 <span className="print-brand-url">{siteUrl()}</span>
                 <span className="print-brand-meta">
@@ -617,7 +617,7 @@ const App: React.FC<{ variant: Variant }> = ({ variant }) => {
             }
           />
           <p className="print-foot">
-            Compared with diffdrop at {siteUrl()}. The diff was computed in the browser; nothing was uploaded.
+            Compared with toolspace at {siteUrl()}. The diff was computed in the browser; nothing was uploaded.
           </p>
         </div>
       )}

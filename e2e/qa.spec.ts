@@ -54,7 +54,7 @@ test('guides and tools carry a breadcrumb in their structured data', async ({ re
     const html = await (await request.get(path)).text();
     const ld = JSON.parse(/<script type="application\/ld\+json">(.*?)<\/script>/.exec(html)![1]!);
     const crumb = ld['@graph'].find((g: { '@type': string }) => g['@type'] === 'BreadcrumbList');
-    expect(crumb.itemListElement.map((i: { name: string }) => i.name)).toEqual(['diffdrop', name]);
+    expect(crumb.itemListElement.map((i: { name: string }) => i.name)).toEqual(['toolspace', name]);
     expect(crumb.itemListElement[1].item).toMatch(new RegExp(`${path}$`));
   }
 });

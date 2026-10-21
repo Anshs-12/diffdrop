@@ -114,8 +114,8 @@ test('JSON to CSV keeps 64-bit numbers exact in the input and the output', async
 
 test('JSON to YAML writes valid, readable YAML', async ({ page }) => {
   await page.goto('/json-to-yaml/');
-  await page.getByLabel('JSON input', { exact: true }).fill('{"name":"diffdrop","version":"1.5.0","enabled":"yes","tags":["a","b"]}');
-  await expect.poll(() => editorText(page, 'YAML output')).toBe('name: diffdrop\nversion: "1.5.0"\nenabled: "yes"\ntags:\n- a\n- b\n');
+  await page.getByLabel('JSON input', { exact: true }).fill('{"name":"toolspace","version":"1.5.0","enabled":"yes","tags":["a","b"]}');
+  await expect.poll(() => editorText(page, 'YAML output')).toBe('name: toolspace\nversion: "1.5.0"\nenabled: "yes"\ntags:\n- a\n- b\n');
 });
 
 test('viewer expands, searches and copies paths', async ({ page, context, browserName }) => {

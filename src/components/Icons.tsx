@@ -1,7 +1,7 @@
 import React from 'react';
 
 /**
- * The diffdrop mark: three lines of a diff — one removed, one kept, one added —
+ * The toolspace mark: three lines of a diff — one removed, one kept, one added —
  * on an ink tile. Colors come from theme tokens so it inverts with dark mode.
  */
 export const LogoMark = ({ size = 30 }: { size?: number }) => (

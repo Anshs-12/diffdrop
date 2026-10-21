@@ -57,7 +57,7 @@ function breadcrumb(page: Page): object {
   return {
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'diffdrop', item: `${SITE_URL}/` },
+      { '@type': 'ListItem', position: 1, name: 'toolspace', item: `${SITE_URL}/` },
       { '@type': 'ListItem', position: 2, name: page.name, item: `${SITE_URL}${page.path}` },
     ],
   };
@@ -76,14 +76,14 @@ function structuredData(page: Page): HtmlTagDescriptor {
       url,
       datePublished: guide.published,
       dateModified: guide.published,
-      author: { '@type': 'Organization', name: 'diffdrop', url: `${SITE_URL}/` },
-      publisher: { '@type': 'Organization', name: 'diffdrop', url: `${SITE_URL}/` },
+      author: { '@type': 'Organization', name: 'toolspace', url: `${SITE_URL}/` },
+      publisher: { '@type': 'Organization', name: 'toolspace', url: `${SITE_URL}/` },
       mainEntityOfPage: url,
     });
   } else {
     graph.push({
       '@type': 'SoftwareApplication',
-      name: page.id === 'home' ? 'diffdrop' : `${page.name} by diffdrop`,
+      name: page.id === 'home' ? 'toolspace' : `${page.name} by toolspace`,
       url,
       description: page.description,
       applicationCategory: 'DeveloperApplication',
@@ -126,7 +126,7 @@ function headTags(page: Page): HtmlTagDescriptor[] {
     meta({ name: 'referrer', content: 'no-referrer' }),
     ...(page.id === 'home' ? [meta({ name: 'google-site-verification', content: GOOGLE_SITE_VERIFICATION })] : []),
     { tag: 'link', attrs: { rel: 'canonical', href: url }, injectTo: 'head' },
-    meta({ property: 'og:site_name', content: 'diffdrop' }),
+    meta({ property: 'og:site_name', content: 'toolspace' }),
     meta({ property: 'og:title', content: page.title }),
     meta({ property: 'og:description', content: page.description }),
     meta({ property: 'og:url', content: url }),
@@ -134,7 +134,7 @@ function headTags(page: Page): HtmlTagDescriptor[] {
     meta({ property: 'og:image', content: `${SITE_URL}/og.png` }),
     meta({ property: 'og:image:width', content: '1200' }),
     meta({ property: 'og:image:height', content: '630' }),
-    meta({ property: 'og:image:alt', content: 'diffdrop: Everything they paywall. Free.' }),
+    meta({ property: 'og:image:alt', content: 'toolspace: Everything they paywall. Free.' }),
     meta({ name: 'twitter:card', content: 'summary_large_image' }),
     meta({ name: 'twitter:title', content: page.title }),
     meta({ name: 'twitter:description', content: page.description }),

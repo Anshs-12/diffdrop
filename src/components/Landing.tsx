@@ -140,7 +140,7 @@ export const Features: React.FC = () => (
               fewest lines removed and added.
             </p>
             <p>
-              diffdrop runs that same algorithm, in the same memory-light form git uses, right here in a background
+              toolspace runs that same algorithm, in the same memory-light form git uses, right here in a background
               thread so typing never stutters. Then it runs it again inside every changed line to pinpoint the exact
               words or characters.
             </p>
@@ -160,7 +160,7 @@ export const Features: React.FC = () => (
             <span className="block rounded-sm bg-add-bg px-1 text-add">+ const FREE_SHIPPING = 50;</span>
             <span className="block px-1">{'  '}</span>
             <span className="block px-1">{'  '}export function calculateTotal(items) {'{'}</span>
-            <span className="mt-3 block text-muted-foreground">diffdrop shows the same 2 additions, 1 removal.</span>
+            <span className="mt-3 block text-muted-foreground">toolspace shows the same 2 additions, 1 removal.</span>
           </pre>
         </div>
       </div>
@@ -205,7 +205,7 @@ export const Paywall: React.FC = () => (
   <section id="free" className="border-t py-20 sm:py-28">
     <div className="page">
       <SectionTitle eyebrow="why it's free" title="They paywall it. We don't.">
-        Other diff checkers meter their best features on the free plan. diffdrop has no plans at all, because there's
+        Other diff checkers meter their best features on the free plan. toolspace has no plans at all, because there's
         nothing for us to pay for: your browser does all the work, so every use costs us exactly nothing.
       </SectionTitle>
 
@@ -215,7 +215,7 @@ export const Paywall: React.FC = () => (
             <tr className="border-b font-mono text-[12px] text-muted-foreground">
               <th className="px-5 py-3.5 font-normal sm:px-7">feature</th>
               <th className="px-4 py-3.5 font-normal">others, free plan</th>
-              <th className="bg-muted px-5 py-3.5 font-normal text-foreground sm:px-7">diffdrop</th>
+              <th className="bg-muted px-5 py-3.5 font-normal text-foreground sm:px-7">toolspace</th>
             </tr>
           </thead>
           <tbody>
@@ -239,7 +239,7 @@ export const Paywall: React.FC = () => (
         </table>
       </div>
       <p className="mt-4 max-w-[80ch] text-[13px] text-muted-foreground">
-        "Others" means the free plan of a popular online diff checker, as listed in October 2026. *diffdrop's
+        "Others" means the free plan of a popular online diff checker, as listed in October 2026. *toolspace's
         plain-language summary works everywhere; the extra AI explanation uses the model built into Chrome and runs on
         your device.
       </p>
@@ -280,7 +280,7 @@ export const Footer: React.FC<{ current: PageId }> = ({ current }) => (
     <div className="page flex flex-wrap items-center gap-x-6 gap-y-4 border-t border-dashed py-6">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <a href="/" className="text-[17px] font-semibold tracking-[-0.02em]">
-          diffdrop
+          toolspace
         </a>
         <span className="font-mono text-xs text-muted-foreground">free, unlimited, and everything stays in this tab</span>
       </div>

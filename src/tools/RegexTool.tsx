@@ -12,7 +12,7 @@ import ToolBar from './ToolBar';
 const EXAMPLE = {
   pattern: '(?<user>[\\w.+-]+)@(?<domain>[\\w-]+\\.[\\w.]+)',
   flags: ['g', 'i'],
-  text: 'Contact ada.lovelace@example.com or grace+news@navy.mil.\nInvalid: alan@ and @turing.org\nSupport: help@diffdrop.dev',
+  text: 'Contact ada.lovelace@example.com or grace+news@navy.mil.\nInvalid: alan@ and @turing.org\nSupport: help@toolspace.tech',
   replacement: '$<user> at $<domain>',
 };
 

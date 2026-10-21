@@ -4,7 +4,10 @@
  * cross-links between tools are all generated from PAGES. Change SITE_URL if the
  * site moves to another domain.
  */
-export const SITE_URL = 'https://diffdrop.anshx12.workers.dev';
+export const SITE_URL = 'https://toolspace.tech';
+
+/** The site's previous address; the worker (src/worker.ts) redirects it here. */
+export const OLD_HOST = 'diffdrop.anshx12.workers.dev';
 
 export const REPO_URL = 'https://github.com/Anshs-12/diffdrop';
 
@@ -59,17 +62,17 @@ export const PAGES: Page[] = [
   {
     id: 'home',
     path: '/',
-    title: 'diffdrop - free, open source developer tools',
+    title: 'toolspace - free, open source developer tools',
     description:
       'Free, open source developer tools that run in your browser: diff checker, JSON diff, formatter, validator, JSON to CSV and YAML, and a viewer. No uploads.',
     name: 'All tools',
-    blurb: 'Every diffdrop tool on one page.',
+    blurb: 'Every toolspace tool on one page.',
     priority: 1.0,
   },
   {
     id: 'diff-checker',
     path: '/diff-checker/',
-    title: 'Diff checker - compare text and code online, free | diffdrop',
+    title: 'Diff checker - compare text and code, free | toolspace',
     description:
       'Compare two texts, code or files side by side, line by line and word by word. Free and open source, no account, and your text never leaves your browser.',
     name: 'Diff checker',
@@ -79,7 +82,7 @@ export const PAGES: Page[] = [
   {
     id: 'json-diff',
     path: '/json-diff/',
-    title: 'JSON diff - compare two JSON files online, free | diffdrop',
+    title: 'JSON diff - compare two JSON files online, free | toolspace',
     description:
       'Compare two JSON files online and see every changed key and value. Format and sort keys in one click. Free, no account; your data stays in your browser.',
     name: 'JSON diff',
@@ -89,7 +92,7 @@ export const PAGES: Page[] = [
   {
     id: 'json-formatter',
     path: '/json-formatter/',
-    title: 'JSON formatter - beautify and minify, no sign-up | diffdrop',
+    title: 'JSON formatter - beautify and minify, no sign-up | toolspace',
     description:
       'Format, beautify or minify JSON online. Pick the indentation, sort keys, and see errors by line and column. Free, and your JSON never leaves your browser.',
     name: 'JSON formatter',
@@ -99,7 +102,7 @@ export const PAGES: Page[] = [
   {
     id: 'json-validator',
     path: '/json-validator/',
-    title: 'JSON validator - check JSON syntax online, free | diffdrop',
+    title: 'JSON validator - check JSON syntax online, free | toolspace',
     description:
       'Validate JSON online and find errors fast: the exact line and column, a plain explanation, duplicate-key warnings. Free, and nothing leaves your browser.',
     name: 'JSON validator',
@@ -109,7 +112,7 @@ export const PAGES: Page[] = [
   {
     id: 'json-to-csv',
     path: '/json-to-csv/',
-    title: 'JSON to CSV converter - free, online | diffdrop',
+    title: 'JSON to CSV converter - free, online | toolspace',
     description:
       'Convert JSON to CSV online. Nested objects become columns, arrays are kept, and the file opens cleanly in Excel. Free, and it all runs in your browser.',
     name: 'JSON to CSV',
@@ -119,7 +122,7 @@ export const PAGES: Page[] = [
   {
     id: 'json-to-yaml',
     path: '/json-to-yaml/',
-    title: 'JSON to YAML converter - free, online | diffdrop',
+    title: 'JSON to YAML converter - free, online | toolspace',
     description:
       'Convert JSON to clean, valid YAML online, with strings quoted only when YAML needs it. Copy or download the result. Free, no account, runs in your browser.',
     name: 'JSON to YAML',
@@ -129,7 +132,7 @@ export const PAGES: Page[] = [
   {
     id: 'json-viewer',
     path: '/json-viewer/',
-    title: 'JSON viewer - explore JSON as a tree online, free | diffdrop',
+    title: 'JSON viewer - explore JSON as a tree, free | toolspace',
     description:
       'View JSON as a collapsible tree. Expand nodes, search keys and values, and copy the path to any value. Free, no account; your JSON stays in your browser.',
     name: 'JSON viewer',
@@ -139,7 +142,7 @@ export const PAGES: Page[] = [
   {
     id: 'base64',
     path: '/base64-encode-decode/',
-    title: 'Base64 encode and decode online, no sign-up | diffdrop',
+    title: 'Base64 encode and decode online, no sign-up | toolspace',
     description:
       'Encode text or files to Base64 and decode Base64 back to text, images or files. UTF-8 safe, URL-safe option, clear errors. Free, and nothing is uploaded.',
     name: 'Base64 encoder',
@@ -149,7 +152,7 @@ export const PAGES: Page[] = [
   {
     id: 'unix-timestamp',
     path: '/unix-timestamp-converter/',
-    title: 'Unix timestamp converter - epoch to date, free | diffdrop',
+    title: 'Unix timestamp converter - epoch to date, free | toolspace',
     description:
       'Convert Unix timestamps to dates and back. Seconds, milliseconds, microseconds or nanoseconds detected for you, any time zone, ISO 8601. Free.',
     name: 'Timestamp converter',
@@ -159,7 +162,7 @@ export const PAGES: Page[] = [
   {
     id: 'jwt-decoder',
     path: '/jwt-decoder/',
-    title: 'JWT decoder - decode and verify, no sign-up | diffdrop',
+    title: 'JWT decoder - decode and verify, no sign-up | toolspace',
     description:
       'Decode a JWT to read its header, payload and expiry, then verify the signature with a secret or public key. Free, and your token never leaves your browser.',
     name: 'JWT decoder',
@@ -169,7 +172,7 @@ export const PAGES: Page[] = [
   {
     id: 'regex-tester',
     path: '/regex-tester/',
-    title: 'Regex tester - test JavaScript regex online, free | diffdrop',
+    title: 'Regex tester - test JavaScript regex, free | toolspace',
     description:
       'Test regular expressions live: every match highlighted, capture groups and named groups listed, replace preview, all JavaScript flags. Free, in browser.',
     name: 'Regex tester',
@@ -179,7 +182,7 @@ export const PAGES: Page[] = [
   {
     id: 'url-encoder',
     path: '/url-encoder-decoder/',
-    title: 'URL encoder and decoder - percent-encoding, free | diffdrop',
+    title: 'URL encoder and decoder - percent-encoding, free | toolspace',
     description:
       'Encode and decode URLs and query strings: component, full URL or form style, with bad escapes pinpointed and any URL split into parts. Free, in browser.',
     name: 'URL encoder',
@@ -209,7 +212,7 @@ export const PAGES: Page[] = [
   {
     id: 'case-converter',
     path: '/case-converter/',
-    title: 'Case converter - upper, lower, camelCase and more | diffdrop',
+    title: 'Case converter - upper, lower, camelCase, more | toolspace',
     description:
       'Convert text to UPPER, lower, Sentence or Title Case, or to camelCase, snake_case, kebab-case and CONSTANT_CASE for code. Free, instant, in your browser.',
     name: 'Case converter',
@@ -219,7 +222,7 @@ export const PAGES: Page[] = [
   {
     id: 'title-case',
     path: '/title-case-converter/',
-    title: 'Title case converter - AP, Chicago, APA, MLA | diffdrop',
+    title: 'Title case converter - AP, Chicago, APA, MLA | toolspace',
     description:
       'Capitalize headlines and titles correctly in AP, Chicago, APA, MLA or New York Times style. Keeps acronyms and brand names intact. Free, in your browser.',
     name: 'Title case',
@@ -229,7 +232,7 @@ export const PAGES: Page[] = [
   {
     id: 'word-counter',
     path: '/word-counter/',
-    title: 'Word counter - words and characters, no sign-up | diffdrop',
+    title: 'Word counter - words and characters, no sign-up | toolspace',
     description:
       'Count words, characters with and without spaces, sentences and paragraphs as you type, plus reading time and top keywords. Free, private, and no sign-up.',
     name: 'Word counter',
@@ -239,7 +242,7 @@ export const PAGES: Page[] = [
   {
     id: 'password-generator',
     path: '/password-generator/',
-    title: 'Password generator - strong, random, no sign-up | diffdrop',
+    title: 'Password generator - strong, random, no sign-up | toolspace',
     description:
       'Generate strong random passwords with your browser\'s secure random generator. Pick the length and characters, see the strength. Nothing is stored.',
     name: 'Password generator',
@@ -249,7 +252,7 @@ export const PAGES: Page[] = [
   {
     id: 'lorem-ipsum',
     path: '/lorem-ipsum-generator/',
-    title: 'Lorem ipsum generator - placeholder text | diffdrop',
+    title: 'Lorem ipsum generator - placeholder text | toolspace',
     description:
       'Generate lorem ipsum placeholder text by paragraphs, sentences or words, as plain text or HTML, starting with the classic Lorem ipsum dolor sit amet.',
     name: 'Lorem ipsum',
@@ -259,7 +262,7 @@ export const PAGES: Page[] = [
   {
     id: 'qr-code',
     path: '/qr-code-generator/',
-    title: 'QR code generator - free, no sign-up, no tracking | diffdrop',
+    title: 'QR code generator - free, no sign-up or tracking | toolspace',
     description:
       'Make QR codes for links, text, Wi-Fi, email or phone numbers. Pick colors and error correction, download PNG or SVG. Free, no expiry, made in your browser.',
     name: 'QR code generator',
@@ -269,7 +272,7 @@ export const PAGES: Page[] = [
   {
     id: 'color-converter',
     path: '/color-converter/',
-    title: 'Color converter - HEX, RGB, HSL, OKLCH, palettes | diffdrop',
+    title: 'Color converter - HEX, RGB, HSL, OKLCH, palettes | toolspace',
     description:
       'Convert colors between HEX, RGB, HSL, HSV, OKLCH and CMYK, check WCAG contrast, and get tints, shades and harmonies. Pick any color. Free, in browser.',
     name: 'Color converter',
@@ -279,7 +282,7 @@ export const PAGES: Page[] = [
   {
     id: 'css-gradient',
     path: '/css-gradient-generator/',
-    title: 'CSS gradient generator - linear, radial, conic | diffdrop',
+    title: 'CSS gradient generator - linear, radial, conic | toolspace',
     description:
       'Design CSS gradients visually: linear, radial or conic, any number of color stops, angle and positions. Copy the CSS in one click. Free, in your browser.',
     name: 'CSS gradient',
@@ -289,7 +292,7 @@ export const PAGES: Page[] = [
   {
     id: 'code-beautifier',
     path: '/code-beautifier/',
-    title: 'Code beautifier - Python, Java, C++, Go and more | diffdrop',
+    title: 'Code beautifier - Python, Java, C++, Go and more | toolspace',
     description:
       'Format Python, Java, C, C++, C#, Go, PHP, JavaScript, TypeScript, SQL, HTML, CSS, JSON and YAML with each language\'s own formatter. Free, in browser.',
     name: 'Code beautifier',
@@ -299,7 +302,7 @@ export const PAGES: Page[] = [
   {
     id: 'markdown-preview',
     path: '/markdown-preview/',
-    title: 'Markdown preview - live editor with GitHub style | diffdrop',
+    title: 'Markdown preview - live editor with GitHub style | toolspace',
     description:
       'Write Markdown and see it rendered live: tables, task lists, code blocks and links, GitHub-flavored. Export HTML. Free, private, works in your browser.',
     name: 'Markdown preview',
@@ -309,19 +312,19 @@ export const PAGES: Page[] = [
   {
     id: 'about',
     path: '/about/',
-    title: 'About diffdrop - free, open source developer tools',
+    title: 'About toolspace - free, open source developer tools',
     description:
-      'Learn what diffdrop is: free, open source developer tools that run in your browser, so the text, files and data you work with never leave your device.',
+      'Learn what toolspace is: free, open source developer tools that run in your browser, so the text, files and data you work with never leave your device.',
     name: 'About',
-    blurb: 'What diffdrop is and how your data stays on your device.',
+    blurb: 'What toolspace is and how your data stays on your device.',
     priority: 0.4,
   },
   {
     id: 'contact',
     path: '/contact/',
-    title: 'Contact diffdrop - email, bugs and tool ideas',
+    title: 'Contact toolspace - email, bugs and tool ideas',
     description:
-      'Get in touch with diffdrop: email for questions and feedback, or open an issue on GitHub to report a bug or suggest a new tool. No forms, no tracking.',
+      'Get in touch with toolspace: email for questions and feedback, or open an issue on GitHub to report a bug or suggest a new tool. No forms, no tracking.',
     name: 'Contact',
     blurb: 'Email, bug reports and tool ideas.',
     priority: 0.3,

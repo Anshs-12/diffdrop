@@ -1,10 +1,10 @@
-# diffdrop
+# toolspace
 
 Everything they paywall. Free. Your text stays in your browser.
 
-diffdrop is a diff checker that runs entirely in your browser: unlimited use,
+toolspace is a diff checker that runs entirely in your browser: unlimited use,
 no account, nothing uploaded. It lives at
-[diffdrop.anshx12.workers.dev](https://diffdrop.anshx12.workers.dev).
+[toolspace.tech](https://toolspace.tech).
 
 ## Features
 

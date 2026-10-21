@@ -1,10 +1,18 @@
-// Cloudflare Workers deployment: a static site served from the Vite build.
+// Cloudflare Workers deployment: a static site served from the Vite build,
+// behind a small worker that redirects the old workers.dev address.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "diffdrop",
   "compatibility_date": "2025-09-01",
+  // Redirects diffdrop.anshx12.workers.dev to https://toolspace.tech (301)
+  "main": "./src/worker.ts",
+  // Keep the workers.dev address reachable, so old links hit the redirect
+  "workers_dev": true,
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
+    // The worker sees every request first (the redirect depends on the host)
+    "run_worker_first": true,
     // Unknown URLs get dist/404.html with a real 404 status, instead of the
     // app with 200 (which search engines read as endless duplicate pages)
     "not_found_handling": "404-page"

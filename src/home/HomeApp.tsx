@@ -164,7 +164,7 @@ export default function HomeApp() {
             )}
           </section>
 
-          <section className="mt-12 grid gap-3 md:grid-cols-3" aria-label="Why diffdrop">
+          <section className="mt-12 grid gap-3 md:grid-cols-3" aria-label="Why toolspace">
             {PROMISES.map(({ Icon, title, body }) => (
               <div key={title} className="rounded-2xl border p-5">
                 <Icon className="size-5 text-add" aria-hidden="true" />
@@ -175,7 +175,7 @@ export default function HomeApp() {
           </section>
           <p className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[14px]">
             <a href="/about/" className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
-              About diffdrop
+              About toolspace
             </a>
             <a href={`${REPO_URL}/issues`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
               <Lightbulb className="size-3.5" aria-hidden="true" /> Suggest a tool

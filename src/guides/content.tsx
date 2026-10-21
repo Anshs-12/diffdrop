@@ -107,7 +107,7 @@ print("\\n".join(difflib.unified_diff(normalize("old.json"), normalize("new.json
         <h3>Big numbers change</h3>
         <p>
           IDs like <code>12345678901234567890</code> are larger than JavaScript numbers can hold exactly, so many tools quietly
-          round them, and the rounding then shows up as a change, or worse, hides one. diffdrop keeps numbers exactly as written.
+          round them, and the rounding then shows up as a change, or worse, hides one. toolspace keeps numbers exactly as written.
         </p>
         <h3>Duplicate keys</h3>
         <p>
@@ -117,7 +117,7 @@ print("\\n".join(difflib.unified_diff(normalize("old.json"), normalize("new.json
         <h3>Private data</h3>
         <p>
           API responses often hold tokens or customer data. Online tools that upload your JSON to a server put that data at risk.
-          Every diffdrop tool runs in your browser, and the page is blocked from sending data anywhere.
+          Every toolspace tool runs in your browser, and the page is blocked from sending data anywhere.
         </p>
       </>
     ),
@@ -247,7 +247,7 @@ df.to_csv("data.csv", index=False, encoding="utf-8-sig")`}</Code>
     body: (
       <>
         <p>
-          diffdrop is a set of everyday developer tools: a diff checker, JSON tools, encoders and decoders, text and code
+          toolspace is a set of everyday developer tools: a diff checker, JSON tools, encoders and decoders, text and code
           tools, generators and more. They are free to use, with no account and no usage limits, and the code is open source.
         </p>
 
@@ -309,7 +309,7 @@ df.to_csv("data.csv", index=False, encoding="utf-8-sig")`}</Code>
         <h2>No forms</h2>
         <p>
           There is no contact form: email goes from your own mail app. What you paste into the tools always stays in your
-          browser; see <a href="/about/">about diffdrop</a>.
+          browser; see <a href="/about/">about toolspace</a>.
         </p>
       </>
     ),

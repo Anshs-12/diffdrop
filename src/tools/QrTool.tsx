@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { SITE_URL } from '@/site';
 import { StatusLine, downloadFile } from './shared';
 
 type Kind = 'text' | 'wifi' | 'email' | 'phone';
@@ -39,7 +40,7 @@ async function downloadPng(svg: string, size: number) {
 
 export default function QrTool() {
   const [kind, setKind] = useState<Kind>('text');
-  const [text, setText] = useState('https://diffdrop.anshx12.workers.dev/');
+  const [text, setText] = useState(`${SITE_URL}/`);
   const [wifi, setWifi] = useState({ ssid: '', password: '', security: 'WPA' as 'WPA' | 'WEP' | 'nopass', hidden: false });
   const [email, setEmail] = useState({ to: '', subject: '', body: '' });
   const [phone, setPhone] = useState('');

@@ -49,9 +49,9 @@ test('contact page shows the email as a mailto link and copyable text, with no f
   expect(html).toMatch(/"@type":"ContactPage"/);
 });
 
-test('about page explains diffdrop in collapsible sections', async ({ page }) => {
+test('about page explains toolspace in collapsible sections', async ({ page }) => {
   await page.goto('/about/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('About diffdrop');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('About toolspace');
   const free = page.locator('details', { hasText: 'How can it be free?' });
   await expect(free).not.toHaveAttribute('open');
   await free.locator('summary').click();

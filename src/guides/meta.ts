@@ -18,7 +18,7 @@ export const GUIDE_META: Record<GuideId, { h1: string; lede: string; published: 
     kind: 'guide',
   },
   'about': {
-    h1: 'About diffdrop',
+    h1: 'About toolspace',
     lede: 'Free, open source developer tools that run in your browser.',
     published: '2026-10-17',
     kind: 'about',

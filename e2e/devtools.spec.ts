@@ -93,7 +93,7 @@ test('regex tester highlights matches, lists groups and previews replacements', 
   await expect(page.getByLabel('Status', { exact: true })).toContainText('3 matches, 2 groups each');
   await expect(page.locator('.regex-editor .cm-match')).toHaveCount(3);
   await expect(page.getByLabel('Matches')).toContainText('domain: navy.mil.');
-  await expect.poll(() => editorText(page, 'Replace result')).toContain('help at diffdrop.dev');
+  await expect.poll(() => editorText(page, 'Replace result')).toContain('help at toolspace.tech');
   await page.getByLabel('Regular expression').fill('(unclosed');
   await expect(page.getByLabel('Status', { exact: true })).toContainText(/unterminated group|missing \)/i);
 });

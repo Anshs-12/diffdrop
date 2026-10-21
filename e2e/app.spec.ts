@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { CHANGED, ORIGINAL, editorText, fillEditors, trackErrors, trackOutgoing } from './helpers';
 
-test.describe('diffdrop', () => {
+test.describe('toolspace', () => {
   test('loads without errors', async ({ page }) => {
     const errors = trackErrors(page);
     await page.goto('/diff-checker/');
-    await expect(page).toHaveTitle(/^Diff checker - compare text and code online/);
+    await expect(page).toHaveTitle(/^Diff checker - compare text and code, free \| toolspace$/);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Diff checker');
     expect(errors).toEqual([]);
   });
@@ -164,6 +164,6 @@ test.describe('privacy', () => {
     await page.goto('/diff-checker/', { waitUntil: 'networkidle' });
     await context.setOffline(true);
     await page.reload();
-    await expect(page).toHaveTitle(/^Diff checker - compare text and code online/);
+    await expect(page).toHaveTitle(/^Diff checker - compare text and code, free \| toolspace$/);
   });
 });

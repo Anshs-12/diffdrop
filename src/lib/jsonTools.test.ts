@@ -223,8 +223,8 @@ describe('scanJson', () => {
 
 describe('jsonToYaml', () => {
   it('writes readable block YAML', () => {
-    expect(jsonToYaml({ name: 'diffdrop', version: '1.5.0', tags: ['a', 'b'], nested: { ok: true, n: null }, empty: [] })).toBe(
-      ['name: diffdrop', 'version: "1.5.0"', 'tags:', '- a', '- b', 'nested:', '  ok: true', '  "n": null', 'empty: []', ''].join(
+    expect(jsonToYaml({ name: 'toolspace', version: '1.5.0', tags: ['a', 'b'], nested: { ok: true, n: null }, empty: [] })).toBe(
+      ['name: toolspace', 'version: "1.5.0"', 'tags:', '- a', '- b', 'nested:', '  ok: true', '  "n": null', 'empty: []', ''].join(
         '\n',
       ),
     );

@@ -82,10 +82,10 @@ const SiteHeader: React.FC<SiteHeaderProps> = ({ current, app = false, resolvedT
         <a
           href={current === 'home' ? '#top' : '/'}
           className="flex items-center gap-2.5"
-          aria-label={current === 'home' ? 'diffdrop, back to top' : 'diffdrop home'}
+          aria-label={current === 'home' ? 'toolspace, back to top' : 'toolspace home'}
         >
           <LogoMark size={32} />
-          <span className="text-[21px] leading-none font-semibold tracking-tight">diffdrop</span>
+          <span className="text-[21px] leading-none font-semibold tracking-tight">toolspace</span>
         </a>
 
         <Tooltip>
@@ -136,7 +136,7 @@ const SiteHeader: React.FC<SiteHeaderProps> = ({ current, app = false, resolvedT
         <Tooltip>
           <TooltipTrigger asChild>
             <Button asChild variant="outline" size="icon-sm" className="hidden bg-card sm:inline-flex">
-              <a href={REPO_URL} target="_blank" rel="noopener noreferrer" aria-label="diffdrop on GitHub">
+              <a href={REPO_URL} target="_blank" rel="noopener noreferrer" aria-label="toolspace on GitHub">
                 <GitHubIcon className="size-4" />
               </a>
             </Button>
