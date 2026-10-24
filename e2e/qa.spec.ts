@@ -66,3 +66,24 @@ test('the shortest tool pages have a worked example and common mistakes', async 
     expect(html, path).toContain('Common mistakes');
   }
 });
+
+test('real icon files and the manifest are linked, served and allowed by the security policy', async ({ page, request }) => {
+  const errors: string[] = [];
+  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  await page.goto('/');
+  for (const [sel, path, type] of [
+    ['link[rel="icon"][href="/favicon.ico"]', '/favicon.ico', 'image/'],
+    ['link[rel="icon"][href="/icon.svg"]', '/icon.svg', 'image/svg+xml'],
+    ['link[rel="apple-touch-icon"]', '/apple-touch-icon.png', 'image/png'],
+    ['link[rel="manifest"]', '/site.webmanifest', ''],
+  ] as const) {
+    await expect(page.locator(sel)).toHaveCount(1);
+    const res = await request.get(path);
+    expect(res.status(), path).toBe(200);
+    if (type) expect(res.headers()['content-type'], path).toContain(type);
+  }
+  const manifest = await (await request.get('/site.webmanifest')).json();
+  expect(manifest.name).toBe('toolspace');
+  for (const icon of manifest.icons) expect((await request.get(icon.src)).status(), icon.src).toBe(200);
+  expect(errors.filter((e) => /Content Security Policy|manifest/i.test(e))).toEqual([]);
+});

@@ -3,12 +3,14 @@ import { useCallback, useEffect, useState } from 'react';
 export type ThemeChoice = 'system' | 'light' | 'dark';
 export type ResolvedTheme = 'light' | 'dark';
 
-const STORAGE_KEY = 'diffdrop-theme';
+const STORAGE_KEY = 'toolspace-theme';
+/** Where the theme was saved before the rename; read once, then moved. */
+const OLD_KEY = 'diffdrop-theme';
 const DARK_QUERY = '(prefers-color-scheme: dark)';
 
 function readChoice(): ThemeChoice {
   try {
-    const v = localStorage.getItem(STORAGE_KEY);
+    const v = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(OLD_KEY);
     if (v === 'light' || v === 'dark') return v;
   } catch {
     // Storage unavailable (private mode, blocked site data)
@@ -39,6 +41,7 @@ export function useTheme() {
     apply();
 
     try {
+      localStorage.removeItem(OLD_KEY);
       if (choice === 'system') localStorage.removeItem(STORAGE_KEY);
       else localStorage.setItem(STORAGE_KEY, choice);
     } catch {

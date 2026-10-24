@@ -2,7 +2,7 @@
 (function () {
   var t = null;
   try {
-    t = localStorage.getItem('diffdrop-theme');
+    t = localStorage.getItem('toolspace-theme') || localStorage.getItem('diffdrop-theme');
   } catch (e) {}
   if (t !== 'light' && t !== 'dark') {
     t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';

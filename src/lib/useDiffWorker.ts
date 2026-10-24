@@ -42,9 +42,9 @@ export function useDiffWorker(
         setState({ result: null, input, error: e.data.error, pending: false });
       } else {
         // Rows reference this thread's own copy of the lines; no text crossed over
-        performance.mark('diffdrop:result');
+        performance.mark('toolspace:result');
         const result = expandDiff(e.data.result, splitLines(input.originalText), splitLines(input.changedText));
-        performance.mark('diffdrop:expanded');
+        performance.mark('toolspace:expanded');
         setState({ result, input, error: null, pending: false });
       }
     };
@@ -70,7 +70,7 @@ export function useDiffWorker(
       };
       lastRequestRef.current = request;
       // Timing marks for performance tests and the browser's performance panel
-      performance.mark('diffdrop:request');
+      performance.mark('toolspace:request');
       workerRef.current.postMessage(request);
     }, 120);
     return () => clearTimeout(timer);

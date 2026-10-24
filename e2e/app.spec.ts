@@ -120,7 +120,7 @@ test.describe('toolspace', () => {
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     // Back to light, which is what the system wants: it follows the system again
     await page.getByRole('button', { name: 'Switch to light theme' }).click();
-    expect(await page.evaluate(() => localStorage.getItem('diffdrop-theme'))).toBeNull();
+    expect(await page.evaluate(() => localStorage.getItem('toolspace-theme'))).toBeNull();
     await page.emulateMedia({ colorScheme: 'dark' });
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   });

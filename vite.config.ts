@@ -10,9 +10,6 @@ import { TOOL_CONTENT } from './src/tools/content';
 import { DIFF_CONTENT } from './src/components/diffContent';
 import { GUIDE_META } from './src/guides/meta';
 
-const FAVICON =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0a0a'/%3E%3Crect x='8' y='9' width='10' height='3' rx='1.5' fill='%23e8908e'/%3E%3Crect x='8' y='14.5' width='16' height='3' rx='1.5' fill='%23fafafa' opacity='.55'/%3E%3Crect x='14' y='20' width='10' height='3' rx='1.5' fill='%239ccb84'/%3E%3C/svg%3E";
-
 /** The HTML file that serves a page: "/" → index.html, "/x/" → x/index.html. */
 const htmlFile = (page: Page) => (page.path === '/' ? 'index.html' : `${page.path.slice(1)}index.html`);
 
@@ -52,6 +49,14 @@ function contentSecurityPolicy(): Plugin {
 
 const isToolPage = (id: PageId): id is keyof typeof TOOL_CONTENT => id in TOOL_CONTENT;
 
+/** The site as an organization, with the square logo search results can show. */
+const ORGANIZATION = {
+  '@type': 'Organization',
+  name: 'toolspace',
+  url: `${SITE_URL}/`,
+  logo: { '@type': 'ImageObject', url: `${SITE_URL}/icon-512.png`, width: 512, height: 512 },
+};
+
 /** Home → page, for the breadcrumb search results show under the title. */
 function breadcrumb(page: Page): object {
   return {
@@ -76,8 +81,8 @@ function structuredData(page: Page): HtmlTagDescriptor {
       url,
       datePublished: guide.published,
       dateModified: guide.published,
-      author: { '@type': 'Organization', name: 'toolspace', url: `${SITE_URL}/` },
-      publisher: { '@type': 'Organization', name: 'toolspace', url: `${SITE_URL}/` },
+      author: ORGANIZATION,
+      publisher: ORGANIZATION,
       mainEntityOfPage: url,
     });
   } else {
@@ -107,7 +112,12 @@ function structuredData(page: Page): HtmlTagDescriptor {
       })),
     });
   }
-  if (page.id !== 'home') graph.push(breadcrumb(page));
+  if (page.id === 'home') {
+    graph.push({ ...ORGANIZATION, '@id': `${SITE_URL}/#organization` });
+    graph.push({ '@type': 'WebSite', name: 'toolspace', url: `${SITE_URL}/`, publisher: { '@id': `${SITE_URL}/#organization` } });
+  } else {
+    graph.push(breadcrumb(page));
+  }
   // Not executed, so the CSP doesn't apply; "<" escaped so text can't close the tag
   const json = JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replace(/</g, '\\u003c');
   return { tag: 'script', attrs: { type: 'application/ld+json' }, children: json, injectTo: 'head' };
@@ -134,12 +144,16 @@ function headTags(page: Page): HtmlTagDescriptor[] {
     meta({ property: 'og:image', content: `${SITE_URL}/og.png` }),
     meta({ property: 'og:image:width', content: '1200' }),
     meta({ property: 'og:image:height', content: '630' }),
-    meta({ property: 'og:image:alt', content: 'toolspace: Everything they paywall. Free.' }),
+    meta({ property: 'og:image:alt', content: 'toolspace: Every developer tool they paywall. Free.' }),
     meta({ name: 'twitter:card', content: 'summary_large_image' }),
     meta({ name: 'twitter:title', content: page.title }),
     meta({ name: 'twitter:description', content: page.description }),
     meta({ name: 'twitter:image', content: `${SITE_URL}/og.png` }),
-    { tag: 'link', attrs: { rel: 'icon', href: FAVICON }, injectTo: 'head' },
+    // Real icon files (public/): search engines and link previews need a URL they can fetch
+    { tag: 'link', attrs: { rel: 'icon', href: '/favicon.ico', sizes: '48x48' }, injectTo: 'head' },
+    { tag: 'link', attrs: { rel: 'icon', href: '/icon.svg', type: 'image/svg+xml' }, injectTo: 'head' },
+    { tag: 'link', attrs: { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' }, injectTo: 'head' },
+    { tag: 'link', attrs: { rel: 'manifest', href: '/site.webmanifest' }, injectTo: 'head' },
     // Applies the saved theme before first paint (plain script from public/)
     { tag: 'script', attrs: { src: '/theme-init.js' }, injectTo: 'head' },
     // Restores the sidebar's scroll position before the first paint (plain script from public/)

@@ -22,7 +22,7 @@ const hasGit = (() => {
   }
 })();
 
-const dir = mkdtempSync(path.join(tmpdir(), 'diffdrop-patch-'));
+const dir = mkdtempSync(path.join(tmpdir(), 'toolspace-patch-'));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 describe('generatePatch', () => {

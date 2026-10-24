@@ -119,7 +119,7 @@ const SideLink: React.FC<{
   </a>
 );
 
-const SCROLL_KEY = 'diffdrop-sidebar-scroll';
+const SCROLL_KEY = 'toolspace-sidebar-scroll';
 // Layout effects don't run when prerendering; plain effects stand in there
 const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 

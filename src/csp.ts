@@ -11,6 +11,8 @@ export const CSP_DIRECTIVES = [
   "worker-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
+  // The web app manifest (public/site.webmanifest), which lists the icons
+  "manifest-src 'self'",
   "font-src 'self'",
   "connect-src 'none'",
   "base-uri 'none'",

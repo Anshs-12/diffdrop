@@ -294,7 +294,7 @@ const EditorPane = memo(
 
       useEffect(() => {
         const emit = (view: EditorView) => {
-          performance.mark(`diffdrop:emit-${side}`);
+          performance.mark(`toolspace:emit-${side}`);
           const text = view.state.doc.toString();
           lastValue.current = text;
           onChangeRef.current(text, fileNameRef.current);
