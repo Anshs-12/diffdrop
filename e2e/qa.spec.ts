@@ -106,4 +106,8 @@ test('home page shows the "featured on" badges, linking out in a new tab', async
   await expect(badges.getByRole('link', { name: 'Featured on FindAlternate' })).toHaveAttribute('href', 'https://www.findalternate.com/toolspace');
   await expect(badges.getByRole('link', { name: 'Featured on DevHunt' })).toHaveAttribute('href', 'https://devhunt.org/tool/toolspace');
   await expect(badges.getByRole('link', { name: 'Featured on ScrollLaunch' })).toHaveAttribute('href', /^https:\/\/www\.scrolllaunch\.com\/products\/toolspace/);
+  await expect(badges.getByRole('link', { name: 'Featured on Million Dot Homepage' })).toHaveAttribute('href', 'https://milliondothomepage.com/product/toolspace');
+  await expect(badges.getByRole('link', { name: 'Featured on DeepLaunch' })).toHaveAttribute('href', 'https://deeplaunch.io');
+  // Long names fit without being cut off
+  expect(await badges.locator('.truncate').evaluateAll((els) => els.filter((e) => e.scrollWidth > e.clientWidth).map((e) => e.textContent))).toEqual([]);
 });

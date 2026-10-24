@@ -114,7 +114,7 @@ export default function HomeApp() {
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label={`Featured on ${b.name}`}
-                        className="flex h-[52px] w-[200px] items-center gap-3 rounded-xl border border-[#e2e2dd] bg-white px-3 text-left text-[#141413] shadow-sm transition-colors hover:border-[#b9b9b1]"
+                        className="flex h-[52px] w-[228px] items-center gap-3 rounded-xl border border-[#e2e2dd] bg-white px-3 text-left text-[#141413] shadow-sm transition-colors hover:border-[#b9b9b1]"
                       >
                         {/* Badges stay white in both themes, like the listing sites' own badges */}
                         <span className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-lg">

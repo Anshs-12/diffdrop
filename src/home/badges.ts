@@ -18,4 +18,10 @@ export const BADGES: Badge[] = [
   { name: 'ScrollLaunch', href: 'https://www.scrolllaunch.com/products/toolspace?ref=badge', logo: '/badges/scrolllaunch.png' },
   { name: 'DevHunt', href: 'https://devhunt.org/tool/toolspace', logo: '/badges/devhunt.png' },
   { name: 'FindAlternate', href: 'https://www.findalternate.com/toolspace', logo: '/badges/findalternate.png' },
+  { name: 'Startup Benchmarks', href: 'https://startupbenchmarks.com/product/toolspace', logo: '/badges/startupbenchmarks.png' },
+  { name: 'Million Dot Homepage', href: 'https://milliondothomepage.com/product/toolspace', logo: '/badges/milliondothomepage.png' },
+  { name: 'ShinyLaunch', href: 'https://shinylaunch.com/product/toolspace', logo: '/badges/shinylaunch.png' },
+  { name: 'LaunchClash', href: 'https://launchclash.com/product/toolspace', logo: '/badges/launchclash.png' },
+  { name: 'Startup Fast', href: 'https://startupfa.st', logo: '/badges/startupfast.png' },
+  { name: 'DeepLaunch', href: 'https://deeplaunch.io', logo: '/badges/deeplaunch.png' },
 ];
