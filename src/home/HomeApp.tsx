@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { ArrowRight, Lightbulb, Lock, Scale, Search, UserX } from 'lucide-react';
 import { pageById, REPO_URL, type PageId } from '@/site';
 import { searchPages } from '@/lib/search';
-import { BADGES } from './badges';
+import { BADGES, BADGE_SIZE } from './badges';
 import { useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -109,12 +109,12 @@ export default function HomeApp() {
                         <img
                           src={b.src}
                           alt={`Featured on ${b.name}`}
-                          width={b.width}
-                          height={b.height}
+                          width={BADGE_SIZE.width}
+                          height={BADGE_SIZE.height}
                           loading="lazy"
                           decoding="async"
-                          className="block h-auto w-full"
-                          style={{ maxWidth: b.width, maxHeight: b.height }}
+                          className="block object-contain"
+                          style={{ width: BADGE_SIZE.width, height: BADGE_SIZE.height }}
                         />
                       </a>
                     </li>

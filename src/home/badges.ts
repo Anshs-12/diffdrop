@@ -7,23 +7,20 @@ export interface Badge {
   name: string;
   href: string;
   src: string;
-  width: number;
-  height: number;
 }
+
+/** Every badge is shown in a box this size (ScrollLaunch's), scaled to fit without stretching. */
+export const BADGE_SIZE = { width: 220, height: 48 };
 
 export const BADGES: Badge[] = [
   {
     name: 'CodeHype',
     href: 'https://www.codehype.ai/product/toolspace?utm_source=codehype_badge',
     src: 'https://www.codehype.ai/badges/toolspace.svg?variant=find-us&v=20',
-    width: 180,
-    height: 65,
   },
   {
     name: 'ScrollLaunch',
     href: 'https://www.scrolllaunch.com/products/toolspace?ref=badge',
     src: 'https://www.scrolllaunch.com/api/badge/toolspace',
-    width: 220,
-    height: 48,
   },
 ];
