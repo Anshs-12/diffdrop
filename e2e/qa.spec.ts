@@ -87,3 +87,13 @@ test('real icon files and the manifest are linked, served and allowed by the sec
   for (const icon of manifest.icons) expect((await request.get(icon.src)).status(), icon.src).toBe(200);
   expect(errors.filter((e) => /Content Security Policy|manifest/i.test(e))).toEqual([]);
 });
+
+test('home page shows the "featured on" badges, linking out in a new tab', async ({ page }) => {
+  await page.goto('/');
+  const badges = page.getByRole('list', { name: 'Featured on' });
+  const link = badges.getByRole('link', { name: 'Featured on CodeHype' });
+  await expect(link).toHaveAttribute('href', /^https:\/\/www\.codehype\.ai\/product\/toolspace/);
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(badges.getByRole('link', { name: 'Featured on ScrollLaunch' })).toHaveAttribute('href', /^https:\/\/www\.scrolllaunch\.com\/products\/toolspace/);
+});

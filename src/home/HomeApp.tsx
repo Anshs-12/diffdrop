@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ArrowRight, Lightbulb, Lock, Scale, Search, UserX } from 'lucide-react';
 import { pageById, REPO_URL, type PageId } from '@/site';
 import { searchPages } from '@/lib/search';
+import { BADGES } from './badges';
 import { useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -98,6 +99,29 @@ export default function HomeApp() {
             <p className="mx-auto mt-4 max-w-[56ch] text-[16.5px] text-muted-foreground">
               {TOOL_COUNT} tools for JSON, text, encoding, colors and code. No sign-up, and nothing leaves your browser.
             </p>
+            {BADGES.length > 0 && (
+              <div className="mt-7 flex flex-col items-center gap-3">
+                <p className="font-mono text-[11.5px] text-muted-foreground">featured on</p>
+                <ul className="flex flex-wrap items-center justify-center gap-3" aria-label="Featured on">
+                  {BADGES.map((b) => (
+                    <li key={b.name}>
+                      <a href={b.href} target="_blank" rel="noopener noreferrer" className="block transition-opacity hover:opacity-85">
+                        <img
+                          src={b.src}
+                          alt={`Featured on ${b.name}`}
+                          width={b.width}
+                          height={b.height}
+                          loading="lazy"
+                          decoding="async"
+                          className="block h-auto w-full"
+                          style={{ maxWidth: b.width, maxHeight: b.height }}
+                        />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </section>
 
           <section className="mt-10" aria-labelledby="popular-heading">

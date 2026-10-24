@@ -11,13 +11,13 @@
 :root {
   color-scheme: light;
 
-  /* Matte, warm off-white: easier on the eyes than bright white */
-  --bg: #edece6;
-  --bg-elev: #f4f3ee;
-  --bg-subtle: #e4e3dc;
-  --bg-hover: #dedcd4;
-  --line: #d8d6cd;
-  --line-strong: #c4c2b8;
+  /* Soft near-white: brighter than the old beige, short of glaring white */
+  --bg: #f8f8f6;
+  --bg-elev: #fdfdfc;
+  --bg-subtle: #efefec;
+  --bg-hover: #e8e8e4;
+  --line: #e2e2dd;
+  --line-strong: #cfcfc8;
 
   --text: #141413;
   --text-muted: #4c4b45;

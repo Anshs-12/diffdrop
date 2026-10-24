@@ -10,7 +10,8 @@ export const CSP_DIRECTIVES = [
   "script-src 'self' 'wasm-unsafe-eval'",
   "worker-src 'self'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data:",
+  // Plus the "featured on" badge images on the home page (src/home/badges.ts)
+  "img-src 'self' data: https://www.codehype.ai https://www.scrolllaunch.com",
   // The web app manifest (public/site.webmanifest), which lists the icons
   "manifest-src 'self'",
   "font-src 'self'",
