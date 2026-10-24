@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
-import { ArrowRight, Lightbulb, Lock, Scale, Search, UserX } from 'lucide-react';
+import { ArrowRight, Check, Lightbulb, Lock, Scale, Search, UserX } from 'lucide-react';
 import { pageById, REPO_URL, type PageId } from '@/site';
 import { searchPages } from '@/lib/search';
-import { BADGES, BADGE_SIZE } from './badges';
+import { BADGES } from './badges';
 import { useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -10,7 +10,6 @@ import SiteHeader from '@/components/SiteHeader';
 import { Footer } from '@/components/Landing';
 import { GROUP_COLORS, Sidebar, TOOL_GROUPS, TOOL_ICONS, TOOL_ONLY_GROUPS, groupOf, type ToolPageId } from '@/components/ToolShell';
 
-const TOOL_COUNT = TOOL_ONLY_GROUPS.reduce((n, g) => n + g.ids.length, 0);
 const TOOLS = TOOL_ONLY_GROUPS.flatMap((g) => g.ids.map(pageById));
 
 /** The most-used tools, shown large at the top. */
@@ -88,7 +87,7 @@ export default function HomeApp() {
         <main id="top" className="min-w-0 pt-10 pb-16 lg:pl-10">
           <section className="text-center lg:pt-4">
             <h1 className="text-[clamp(30px,4.6vw,50px)] leading-[1.08] font-semibold tracking-[-0.04em]">
-              Every developer tool you need, in one place.
+              All the developer tools, in one place.
               <span className="mt-[0.18em] flex flex-wrap justify-center gap-x-[0.22em] gap-y-[0.1em]">
                 <span className="inline-block rounded-[0.14em] bg-add-bg px-[0.14em] pb-[0.04em] text-add">Free.</span>
                 <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className="inline-block rounded-[0.14em] bg-add-bg px-[0.14em] pb-[0.04em] text-add hover:opacity-80">
@@ -96,26 +95,35 @@ export default function HomeApp() {
                 </a>
               </span>
             </h1>
-            <p className="mx-auto mt-4 max-w-[56ch] text-[16.5px] text-muted-foreground">
-              {TOOL_COUNT} tools for JSON, text, encoding, colors and code. No sign-up, and nothing leaves your browser.
-            </p>
+            <ul className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 font-mono text-[12.5px] text-muted-foreground" aria-label="Highlights">
+              {['no login', 'no sign-up', 'no uploads', 'no limits'].map((label) => (
+                <li key={label} className="inline-flex items-center gap-1.5">
+                  <Check className="size-3.5 text-add" aria-hidden="true" />
+                  {label}
+                </li>
+              ))}
+            </ul>
             {BADGES.length > 0 && (
               <div className="mt-7 flex flex-col items-center gap-3">
                 <p className="font-mono text-[11.5px] text-muted-foreground">featured on</p>
                 <ul className="flex flex-wrap items-center justify-center gap-3" aria-label="Featured on">
                   {BADGES.map((b) => (
                     <li key={b.name}>
-                      <a href={b.href} target="_blank" rel="noopener noreferrer" className="block transition-opacity hover:opacity-85">
-                        <img
-                          src={b.src}
-                          alt={`Featured on ${b.name}`}
-                          width={BADGE_SIZE.width}
-                          height={BADGE_SIZE.height}
-                          loading="lazy"
-                          decoding="async"
-                          className="block object-contain"
-                          style={{ width: BADGE_SIZE.width, height: BADGE_SIZE.height }}
-                        />
+                      <a
+                        href={b.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Featured on ${b.name}`}
+                        className="flex h-[52px] w-[200px] items-center gap-3 rounded-xl border border-[#e2e2dd] bg-white px-3 text-left text-[#141413] shadow-sm transition-colors hover:border-[#b9b9b1]"
+                      >
+                        {/* Badges stay white in both themes, like the listing sites' own badges */}
+                        <span className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-lg">
+                          <img src={b.logo} alt="" width={32} height={32} loading="lazy" decoding="async" className="size-full object-contain" />
+                        </span>
+                        <span className="min-w-0 leading-tight">
+                          <span className="block font-mono text-[9.5px] tracking-[0.08em] text-[#5c5c56] uppercase">Featured on</span>
+                          <span className="block truncate text-[15px] font-semibold tracking-[-0.01em]">{b.name}</span>
+                        </span>
                       </a>
                     </li>
                   ))}

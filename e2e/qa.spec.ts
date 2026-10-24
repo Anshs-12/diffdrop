@@ -90,10 +90,20 @@ test('real icon files and the manifest are linked, served and allowed by the sec
 
 test('home page shows the "featured on" badges, linking out in a new tab', async ({ page }) => {
   await page.goto('/');
+  // Same size for every badge, logos served from this site
+  const sizes = await page.getByRole('list', { name: 'Featured on' }).getByRole('link').evaluateAll((els) => els.map((e) => `${e.getBoundingClientRect().width}x${e.getBoundingClientRect().height}`));
+  expect(new Set(sizes).size).toBe(1);
+  for (const src of await page.getByRole('list', { name: 'Featured on' }).locator('img').evaluateAll((els) => els.map((e) => (e as HTMLImageElement).src))) {
+    expect(new URL(src).pathname).toMatch(/^\/badges\/[a-z]+\.png$/);
+  }
+  // The home page never states how many tools there are
+  expect(await page.locator('main').innerText()).not.toMatch(/\b\d+\s+tools\b/i);
   const badges = page.getByRole('list', { name: 'Featured on' });
   const link = badges.getByRole('link', { name: 'Featured on CodeHype' });
   await expect(link).toHaveAttribute('href', /^https:\/\/www\.codehype\.ai\/product\/toolspace/);
   await expect(link).toHaveAttribute('target', '_blank');
   await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(badges.getByRole('link', { name: 'Featured on FindAlternate' })).toHaveAttribute('href', 'https://www.findalternate.com/toolspace');
+  await expect(badges.getByRole('link', { name: 'Featured on DevHunt' })).toHaveAttribute('href', 'https://devhunt.org/tool/toolspace');
   await expect(badges.getByRole('link', { name: 'Featured on ScrollLaunch' })).toHaveAttribute('href', /^https:\/\/www\.scrolllaunch\.com\/products\/toolspace/);
 });

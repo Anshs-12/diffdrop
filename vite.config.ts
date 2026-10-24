@@ -131,7 +131,7 @@ function headTags(page: Page): HtmlTagDescriptor[] {
     { tag: 'title', children: page.title, injectTo: 'head' },
     meta({ name: 'description', content: page.description }),
     meta({ name: 'color-scheme', content: 'light dark' }),
-    meta({ name: 'theme-color', media: '(prefers-color-scheme: light)', content: '#f8f8f6' }),
+    meta({ name: 'theme-color', media: '(prefers-color-scheme: light)', content: '#fcfcfa' }),
     meta({ name: 'theme-color', media: '(prefers-color-scheme: dark)', content: '#0a0a0a' }),
     meta({ name: 'referrer', content: 'no-referrer' }),
     ...(page.id === 'home' ? [meta({ name: 'google-site-verification', content: GOOGLE_SITE_VERIFICATION })] : []),

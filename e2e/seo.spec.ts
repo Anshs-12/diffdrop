@@ -49,7 +49,7 @@ test.describe('search and sharing', () => {
   test('home page is a hub with a card for every tool', async ({ page }) => {
     const errors = trackErrors(page);
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Every developer tool you need, in one place.');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('All the developer tools, in one place.');
     // Popular tools up top, and the sidebar lists every tool
     await expect(page.getByRole('heading', { name: 'Popular tools' })).toBeVisible();
     await expect(page.getByRole('complementary', { name: 'Tools' }).getByRole('link', { name: 'All tools' })).toHaveAttribute('aria-current', 'page');
@@ -68,7 +68,7 @@ test.describe('search and sharing', () => {
 
   test('home page content is in the static HTML', async ({ request }) => {
     const html = await (await request.get('/')).text();
-    expect(html).toContain('Every developer tool you need, in one place.');
+    expect(html).toContain('All the developer tools, in one place.');
     for (const name of ['Diff checker', 'JSON formatter', 'QR code generator', 'Markdown preview']) expect(html).toContain(name);
   });
 
