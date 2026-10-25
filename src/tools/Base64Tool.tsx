@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Download, FileIcon, FolderOpen, Trash2 } from 'lucide-react';
 import { bytesToBase64, bytesToText, decodeBase64, encodeText, hexPreview, sniffType } from '@/lib/base64';
@@ -9,6 +9,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import CodeEditor from './CodeEditor';
 import { IconButton, OutputActions, Panel, StatusLine, byteLength, formatBytes } from './shared';
 import ToolBar from './ToolBar';
+import { useSaved } from './saved';
 
 type Mode = 'encode' | 'decode';
 
@@ -27,11 +28,53 @@ function downloadBytes(bytes: Uint8Array, name: string, mime: string) {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
+/**
+ * Accepts a file dropped anywhere on its box, like Panel's onFile, but hands
+ * over the File itself so binary files are encoded byte for byte.
+ */
+function FileDrop({ onFile, children }: { onFile: (f: File) => void; children: React.ReactNode }) {
+  const [over, setOver] = useState(false);
+  const hasFiles = (e: React.DragEvent) => Array.from(e.dataTransfer.types).includes('Files');
+  return (
+    <div
+      className="relative flex min-w-0 flex-col"
+      onDragOverCapture={(e) => {
+        if (!hasFiles(e)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        setOver(true);
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOver(false);
+      }}
+      onDropCapture={(e) => {
+        if (!hasFiles(e)) return;
+        // The file replaces the input; the editor mustn't also insert it
+        e.preventDefault();
+        e.stopPropagation();
+        setOver(false);
+        const f = e.dataTransfer.files[0];
+        if (f) onFile(f);
+      }}
+    >
+      {over && (
+        <div
+          className="pointer-events-none absolute inset-0 z-10 grid place-items-center border-2 border-dashed border-foreground/40 bg-background/80 text-[13px] font-medium"
+          aria-hidden="true"
+        >
+          Drop the file to open it
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
 export default function Base64Tool() {
-  const [mode, setMode] = useState<Mode>('encode');
-  const [text, setText] = useState('');
-  const [urlSafe, setUrlSafe] = useState(false);
-  const [dataUrl, setDataUrl] = useState(false);
+  const [mode, setMode] = useSaved<Mode>('mode', 'encode', (v) => v === 'encode' || v === 'decode');
+  const [text, setText] = useSaved('text', '');
+  const [urlSafe, setUrlSafe] = useSaved('urlSafe', false);
+  const [dataUrl, setDataUrl] = useSaved('dataUrl', false);
   /** A binary file being encoded (shown instead of the text editor). */
   const [file, setFile] = useState<{ name: string; type: string; bytes: Uint8Array } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -185,57 +228,59 @@ export default function Base64Tool() {
       </ToolBar>
       {status}
       <div className="tool-panes">
-        <Panel
-          title={mode === 'encode' ? 'text' : 'base64'}
-          meta={!file && text ? formatBytes(byteLength(text)) : undefined}
-          actions={
-            <>
-              <IconButton label="Open a file" onClick={() => fileRef.current?.click()}>
-                <FolderOpen />
-              </IconButton>
-              <IconButton label="Clear" onClick={() => (setFile(null), setText(''))} disabled={!text && !file}>
-                <Trash2 />
-              </IconButton>
-              <input
-                ref={fileRef}
-                type="file"
-                hidden
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  e.target.value = '';
-                  if (f) void openFile(f);
-                }}
-              />
-            </>
-          }
-        >
-          {file ? (
-            <div className="tool-editor grid place-items-center p-6 text-center">
-              <div>
-                <FileIcon className="mx-auto size-8 text-muted-foreground" aria-hidden="true" />
-                <p className="mt-3 font-medium break-all">{file.name}</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {formatBytes(file.bytes.length)}
-                  {file.type && ` · ${file.type}`}
-                </p>
-                <Button variant="outline" size="sm" className="mt-4" onClick={() => setFile(null)}>
-                  Type text instead
-                </Button>
+        <FileDrop onFile={(f) => void openFile(f)}>
+          <Panel
+            title={mode === 'encode' ? 'text' : 'base64'}
+            meta={!file && text ? formatBytes(byteLength(text)) : undefined}
+            actions={
+              <>
+                <IconButton label="Open a file" onClick={() => fileRef.current?.click()}>
+                  <FolderOpen />
+                </IconButton>
+                <IconButton label="Clear" onClick={() => (setFile(null), setText(''))} disabled={!text && !file}>
+                  <Trash2 />
+                </IconButton>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  hidden
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = '';
+                    if (f) void openFile(f);
+                  }}
+                />
+              </>
+            }
+          >
+            {file ? (
+              <div className="tool-editor grid place-items-center p-6 text-center">
+                <div>
+                  <FileIcon className="mx-auto size-8 text-muted-foreground" aria-hidden="true" />
+                  <p className="mt-3 font-medium break-all">{file.name}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {formatBytes(file.bytes.length)}
+                    {file.type && ` · ${file.type}`}
+                  </p>
+                  <Button variant="outline" size="sm" className="mt-4" onClick={() => setFile(null)}>
+                    Type text instead
+                  </Button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <CodeEditor
-              key={mode}
-              value={text}
-              onChange={setText}
-              lang={null}
-              wrap
-              placeholder={mode === 'encode' ? 'Type or paste text to encode, or open a file' : 'Paste Base64 to decode'}
-              ariaLabel={mode === 'encode' ? 'Text to encode' : 'Base64 to decode'}
-              className="tool-editor"
-            />
-          )}
-        </Panel>
+            ) : (
+              <CodeEditor
+                key={mode}
+                value={text}
+                onChange={setText}
+                lang={null}
+                wrap
+                placeholder={mode === 'encode' ? 'Type or paste text to encode, or open a file' : 'Paste Base64 to decode'}
+                ariaLabel={mode === 'encode' ? 'Text to encode' : 'Base64 to decode'}
+                className="tool-editor"
+              />
+            )}
+          </Panel>
+        </FileDrop>
         {output}
       </div>
     </>

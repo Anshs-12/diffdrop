@@ -13,7 +13,7 @@ import { GROUP_COLORS, Sidebar, TOOL_GROUPS, TOOL_ICONS, TOOL_ONLY_GROUPS, group
 const TOOLS = TOOL_ONLY_GROUPS.flatMap((g) => g.ids.map(pageById));
 
 /** The most-used tools, shown large at the top. */
-const POPULAR: ToolPageId[] = ['diff-checker', 'json-formatter', 'base64', 'qr-code', 'word-counter', 'password-generator'];
+export const POPULAR: ToolPageId[] = ['diff-checker', 'json-formatter', 'base64', 'qr-code', 'word-counter', 'password-generator'];
 
 const CATEGORIES = ['All', ...TOOL_ONLY_GROUPS.map((g) => g.label)];
 
@@ -62,7 +62,7 @@ function PopularCard({ id }: { id: ToolPageId }) {
   );
 }
 
-const PROMISES = [
+export const PROMISES = [
   { Icon: Lock, title: 'Nothing is uploaded', body: 'Every tool runs in your browser. Your data never leaves this tab.' },
   { Icon: UserX, title: 'No sign-up, no limits', body: 'No accounts, no daily caps, no "pro" plan. Use anything as often as you like.' },
   { Icon: Scale, title: 'Open source', body: 'MIT licensed. Read the code, run it yourself, or help improve it.' },
@@ -103,33 +103,6 @@ export default function HomeApp() {
                 </li>
               ))}
             </ul>
-            {BADGES.length > 0 && (
-              <div className="mt-7 flex flex-col items-center gap-3">
-                <p className="font-mono text-[11.5px] text-muted-foreground">featured on</p>
-                <ul className="flex flex-wrap items-center justify-center gap-3" aria-label="Featured on">
-                  {BADGES.map((b) => (
-                    <li key={b.name}>
-                      <a
-                        href={b.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={`Featured on ${b.name}`}
-                        className="flex h-[52px] w-[228px] items-center gap-3 rounded-xl border border-[#e2e2dd] bg-white px-3 text-left text-[#141413] shadow-sm transition-colors hover:border-[#b9b9b1]"
-                      >
-                        {/* Badges stay white in both themes, like the listing sites' own badges */}
-                        <span className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-lg">
-                          <img src={b.logo} alt="" width={32} height={32} loading="lazy" decoding="async" className="size-full object-contain" />
-                        </span>
-                        <span className="min-w-0 leading-tight">
-                          <span className="block font-mono text-[9.5px] tracking-[0.08em] text-[#5c5c56] uppercase">Featured on</span>
-                          <span className="block truncate text-[15px] font-semibold tracking-[-0.01em]">{b.name}</span>
-                        </span>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </section>
 
           <section className="mt-10" aria-labelledby="popular-heading">
@@ -213,6 +186,33 @@ export default function HomeApp() {
               <Lightbulb className="size-3.5" aria-hidden="true" /> Suggest a tool
             </a>
           </p>
+          {BADGES.length > 0 && (
+            <section className="mt-14 flex flex-col items-center gap-3 border-t pt-10" aria-label="Featured on sites">
+              <p className="font-mono text-[11.5px] text-muted-foreground">featured on</p>
+              <ul className="flex flex-wrap items-center justify-center gap-3" aria-label="Featured on">
+                {BADGES.map((b) => (
+                  <li key={b.name}>
+                    <a
+                      href={b.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Featured on ${b.name}`}
+                      className="flex h-[52px] w-[228px] items-center gap-3 rounded-xl border border-[#e2e2dd] bg-white px-3 text-left text-[#141413] shadow-sm transition-colors hover:border-[#b9b9b1]"
+                    >
+                      {/* Badges stay white in both themes, like the listing sites' own badges */}
+                      <span className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-lg">
+                        <img src={b.logo} alt="" width={32} height={32} loading="lazy" decoding="async" className="size-full object-contain" />
+                      </span>
+                      <span className="min-w-0 leading-tight">
+                        <span className="block font-mono text-[9.5px] tracking-[0.08em] text-[#5c5c56] uppercase">Featured on</span>
+                        <span className="block truncate text-[15px] font-semibold tracking-[-0.01em]">{b.name}</span>
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </main>
       </div>
       <Footer current="home" />

@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import CodeEditor from './CodeEditor';
-import { OutputActions, Panel, StatusLine } from './shared';
+import { InputActions, OutputActions, Panel, StatusLine } from './shared';
 import ToolBar from './ToolBar';
 
 /** An HS256 example signed with the secret "toolspace-secret" (iat 2026-10-17, exp 2099). */
@@ -27,6 +27,7 @@ function formatDate(ms: number): string {
 }
 
 export default function JwtTool() {
+  // Plain state on purpose: tokens and keys are never saved or put in a link (PRIVATE_TOOLS)
   const [token, setToken] = useState('');
   const [key, setKey] = useState('');
   const [keyIsBase64, setKeyIsBase64] = useState(false);
@@ -77,7 +78,11 @@ export default function JwtTool() {
       )}
 
       <div className="tool-panes">
-        <Panel title="token">
+        <Panel
+          title="token"
+          onFile={(t) => setToken(t.trim())}
+          actions={<InputActions onLoad={(t) => setToken(t.trim())} onClear={() => setToken('')} canClear={!!token} accept="text/*,.txt,.jwt" />}
+        >
           <CodeEditor
             value={token}
             onChange={setToken}

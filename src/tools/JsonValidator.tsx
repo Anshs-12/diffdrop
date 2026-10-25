@@ -1,8 +1,9 @@
 import { useMemo, useRef } from 'react';
-import { jsonStats } from '@/lib/jsonTools';
+import { Braces, Minimize2 } from 'lucide-react';
+import { jsonStats, stringifyJson } from '@/lib/jsonTools';
 import { Button } from '@/components/ui/button';
 import CodeEditor, { type CodeEditorHandle } from './CodeEditor';
-import { InputActions, JsonStatusLine, Panel, byteLength, formatBytes, useJsonInput } from './shared';
+import { IconButton, InputActions, JsonStatusLine, Panel, byteLength, copyText, formatBytes, useJsonInput } from './shared';
 import { EXAMPLE_JSON } from './content';
 import ToolBar from './ToolBar';
 
@@ -35,7 +36,29 @@ export default function JsonValidator() {
             `depth ${stats.depth}, ${formatBytes(byteLength(text))}`
         }
       />
-      <Panel title="json" actions={<InputActions onLoad={setText} onClear={() => setText('')} canClear={!!text} />}>
+      <Panel
+        title="json"
+        onFile={setText}
+        actions={
+          <>
+            <IconButton
+              label="Copy formatted JSON"
+              disabled={parsed.status !== 'valid'}
+              onClick={() => parsed.status === 'valid' && copyText(stringifyJson(parsed.value, 2, false), 'Copied formatted JSON')}
+            >
+              <Braces />
+            </IconButton>
+            <IconButton
+              label="Copy minified JSON"
+              disabled={parsed.status !== 'valid'}
+              onClick={() => parsed.status === 'valid' && copyText(stringifyJson(parsed.value, 'minify', false), 'Copied minified JSON')}
+            >
+              <Minimize2 />
+            </IconButton>
+            <InputActions onLoad={setText} onClear={() => setText('')} canClear={!!text} />
+          </>
+        }
+      >
         <CodeEditor
           ref={inputRef}
           value={text}

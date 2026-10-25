@@ -8,6 +8,7 @@ import { buildLineMarks } from '@/lib/marks';
 import { generatePatch } from '@/lib/patch';
 import { applyMerge } from '@/lib/merge';
 import { decodeHash, encodeHash } from '@/lib/share';
+import { forgetSaved, useSaved, useSavedStatus } from '@/tools/saved';
 import { useTheme } from '@/lib/theme';
 import { SAMPLE_CHANGED, SAMPLE_JSON_CHANGED, SAMPLE_JSON_ORIGINAL, SAMPLE_ORIGINAL } from '@/lib/sample';
 import { checkJson, formatJson } from '@/lib/json';
@@ -74,8 +75,10 @@ const App: React.FC<{ variant: Variant }> = ({ variant }) => {
   // Decode shared texts from the URL fragment on first render
   const shared = useMemo(() => (typeof window === 'undefined' ? null : decodeHash(window.location.hash)), []);
 
-  const [originalText, setOriginalText] = useState(shared?.original ?? '');
-  const [changedText, setChangedText] = useState(shared?.changed ?? '');
+  // Kept in this browser between visits (see tools/saved.ts); a share link's texts win
+  const [originalText, setOriginalText] = useSaved('original', '', undefined, shared?.original);
+  const [changedText, setChangedText] = useSaved('changed', '', undefined, shared?.changed);
+  const savedInput = useSavedStatus();
   const [originalName, setOriginalName] = useState<string | null>(null);
   const [changedName, setChangedName] = useState<string | null>(null);
 
@@ -344,7 +347,9 @@ const App: React.FC<{ variant: Variant }> = ({ variant }) => {
     history.replaceState(null, '', `#${hash}`);
     try {
       await navigator.clipboard.writeText(url);
-      toast.success('Link copied', { description: 'Both texts are inside it, after the #.' });
+      toast.success('Link copied', {
+        description: 'Both texts are inside it, after the #. Anyone who gets the link can read them, and it stays in your browser history.',
+      });
     } catch {
       notify('Link updated in the address bar');
     }
@@ -520,6 +525,7 @@ const App: React.FC<{ variant: Variant }> = ({ variant }) => {
                 onUndo={handleUndo}
                 onSwap={handleSwap}
                 onShare={handleShare}
+                onForget={savedInput.saved ? forgetSaved : undefined}
                 summaryOpen={summaryOpen}
                 onToggleSummary={() => setSummaryOpen((o) => !o)}
                 onCopy={handleCopy}

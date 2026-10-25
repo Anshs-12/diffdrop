@@ -1,9 +1,16 @@
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useMemo } from 'react';
 import { Copy, Download } from 'lucide-react';
 import { htmlDocument, renderMarkdown } from '@/lib/markdown';
 import CodeEditor from './CodeEditor';
 import { IconButton, InputActions, Panel, copyText, downloadFile } from './shared';
 import ToolBar from './ToolBar';
+import { useSaved } from './saved';
+
+/** The first heading, as the downloaded page's title. */
+function titleOf(md: string): string {
+  const m = /^ {0,3}#{1,6}[ \t]+(.+?)[ \t#]*$/m.exec(md);
+  return m ? m[1]!.replace(/[*_`~[\]]/g, '').trim() || 'Document' : 'Document';
+}
 
 const EXAMPLE = `# Project name
 
@@ -30,7 +37,7 @@ function greet(name) {
 `;
 
 export default function MarkdownTool() {
-  const [md, setMd] = useState('');
+  const [md, setMd] = useSaved('markdown', '');
   const deferred = useDeferredValue(md);
   // Sanitized: scripts and event handlers in the Markdown are removed
   const html = useMemo(() => renderMarkdown(deferred), [deferred]);
@@ -39,7 +46,21 @@ export default function MarkdownTool() {
     <>
       <ToolBar onExample={() => setMd(EXAMPLE)} />
       <div className="tool-panes">
-        <Panel title="markdown" actions={<InputActions onLoad={setMd} onClear={() => setMd('')} canClear={!!md} accept=".md,.markdown,.txt,text/*" />}>
+        <Panel
+          title="markdown"
+          onFile={setMd}
+          actions={
+            <>
+              <InputActions onLoad={setMd} onClear={() => setMd('')} canClear={!!md} accept=".md,.markdown,.txt,text/*" />
+              <IconButton label="Copy Markdown" onClick={() => copyText(md, 'Markdown copied')} disabled={!md}>
+                <Copy />
+              </IconButton>
+              <IconButton label="Download document.md" onClick={() => downloadFile(md, 'document.md', 'text/markdown;charset=utf-8')} disabled={!md}>
+                <Download />
+              </IconButton>
+            </>
+          }
+        >
           <CodeEditor value={md} onChange={setMd} lang={null} wrap placeholder="Write or paste Markdown" ariaLabel="Markdown" className="tool-editor" />
         </Panel>
         <Panel
@@ -49,7 +70,7 @@ export default function MarkdownTool() {
               <IconButton label="Copy HTML" onClick={() => copyText(html, 'HTML copied')} disabled={!html}>
                 <Copy />
               </IconButton>
-              <IconButton label="Download HTML page" onClick={() => downloadFile(htmlDocument(md), 'document.html', 'text/html')} disabled={!md}>
+              <IconButton label="Download HTML page" onClick={() => downloadFile(htmlDocument(md, titleOf(md)), 'document.html', 'text/html;charset=utf-8')} disabled={!md}>
                 <Download />
               </IconButton>
             </>

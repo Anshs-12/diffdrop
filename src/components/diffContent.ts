@@ -12,7 +12,7 @@ export const DIFF_CONTENT: Record<
     steps: [
       { title: 'Paste or drop both versions', body: 'The original goes on the left (a), the changed version on the right (b). Files are read on your machine, never uploaded.' },
       { title: 'Read the changes', body: 'Removed lines are red, added lines green, and changed words inside a line are marked. Jump between changes with the arrows.' },
-      { title: 'Merge, share or export', body: 'Copy a change across with one click, share a link that carries both texts, or export a patch, HTML or PDF.' },
+      { title: 'Merge, share or export', body: 'Copy a change across with one click, share a link that carries both texts, download a .patch file, or save the comparison as a PDF.' },
     ],
     faq: [
       { q: 'Is there a size limit?', a: 'No fixed limit. Files with hundreds of thousands of lines work; the only limit is your browser’s memory.' },

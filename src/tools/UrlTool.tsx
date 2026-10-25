@@ -1,9 +1,10 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef } from 'react';
 import { parseUrl, urlDecode, urlEncode, type UrlMode } from '@/lib/urlCodec';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import CodeEditor, { type CodeEditorHandle } from './CodeEditor';
 import { InputActions, OutputActions, Panel, StatusLine } from './shared';
 import ToolBar from './ToolBar';
+import { useSaved } from './saved';
 
 type Direction = 'encode' | 'decode';
 
@@ -25,9 +26,9 @@ function position(text: string, index: number): { line: number; column: number }
 }
 
 export default function UrlTool() {
-  const [direction, setDirection] = useState<Direction>('encode');
-  const [mode, setMode] = useState<UrlMode>('component');
-  const [text, setText] = useState('');
+  const [direction, setDirection] = useSaved<Direction>('direction', 'encode', (v) => v === 'encode' || v === 'decode');
+  const [mode, setMode] = useSaved<UrlMode>('mode', 'component', (v) => MODES.some((m) => m.value === v));
+  const [text, setText] = useSaved('text', '');
   const inputRef = useRef<CodeEditorHandle>(null);
 
   const result = useMemo(() => {
@@ -76,7 +77,7 @@ export default function UrlTool() {
       )}
 
       <div className="tool-panes">
-        <Panel title={direction === 'encode' ? 'text' : 'encoded'} actions={<InputActions onLoad={setText} onClear={() => setText('')} canClear={!!text} accept="text/*,.txt,.url" />}>
+        <Panel title={direction === 'encode' ? 'text' : 'encoded'} onFile={setText} actions={<InputActions onLoad={setText} onClear={() => setText('')} canClear={!!text} accept="text/*,.txt,.url" />}>
           <CodeEditor
             key={direction}
             ref={inputRef}

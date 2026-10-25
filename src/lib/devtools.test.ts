@@ -169,6 +169,24 @@ describe('jwt', () => {
     }
   });
 
+  it('says which key type is needed when the key does not match the algorithm', async () => {
+    const rs = decodeJwt(`${b64url('{"alg":"RS256"}')}.e30.AAAA`);
+    const es = decodeJwt(`${b64url('{"alg":"ES384"}')}.e30.AAAA`);
+    if (!rs.ok || !es.ok) throw new Error('decode failed');
+    const ec = (await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify'])) as CryptoKeyPair;
+    const ecSpki = pem(await crypto.subtle.exportKey('spki', ec.publicKey));
+    const ecJwk = JSON.stringify(await crypto.subtle.exportKey('jwk', ec.publicKey));
+    expect(await verifyJwt(rs.jwt, ecSpki)).toEqual({
+      ok: false,
+      message: 'This token is signed with RS256, which needs an RSA key, but the key you pasted is an EC key on the P-256 curve. Use the public key that matches the token\'s "alg".',
+    });
+    expect(await verifyJwt(rs.jwt, ecJwk)).toMatchObject({ ok: false, message: expect.stringContaining('needs an RSA key, but the key you pasted is an EC key') });
+    // Right family, wrong curve
+    expect(await verifyJwt(es.jwt, ecSpki)).toMatchObject({ ok: false, message: expect.stringContaining('needs an EC key on the P-384 curve, but the key you pasted is an EC key on the P-256 curve') });
+    // A key the browser can't import still says what was expected
+    expect(await verifyJwt(rs.jwt, '-----BEGIN PUBLIC KEY-----\nAAAA\n-----END PUBLIC KEY-----')).toMatchObject({ ok: false, message: expect.stringContaining('RS256 needs an RSA key') });
+  });
+
   it('refuses alg none, unknown algorithms and private keys', async () => {
     const none = decodeJwt('eyJhbGciOiJub25lIn0.e30.');
     if (!none.ok) throw new Error('decode failed');

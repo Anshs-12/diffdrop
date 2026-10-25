@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react';
-import { Copy, Plus, X } from 'lucide-react';
+import { useMemo } from 'react';
+import { Copy, Download, Plus, X } from 'lucide-react';
 import { gradientCss, type GradientKind, type GradientStop } from '@/lib/color';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { IconButton, copyText } from './shared';
+import { IconButton, copyText, downloadFile } from './shared';
+import ToolBar from './ToolBar';
+import { useSaved } from './saved';
 
 const PRESETS: { name: string; kind: GradientKind; angle: number; stops: GradientStop[] }[] = [
   { name: 'Sunset', kind: 'linear', angle: 135, stops: [{ color: '#f97316', at: 0 }, { color: '#ec4899', at: 50 }, { color: '#8b5cf6', at: 100 }] },
@@ -14,18 +16,30 @@ const PRESETS: { name: string; kind: GradientKind; angle: number; stops: Gradien
   { name: 'Wheel', kind: 'conic', angle: 0, stops: [{ color: '#ef4444', at: 0 }, { color: '#eab308', at: 33 }, { color: '#22c55e', at: 66 }, { color: '#ef4444', at: 100 }] },
 ];
 
+const KINDS: GradientKind[] = ['linear', 'radial', 'conic'];
+const HEX = /^#[0-9a-f]{6}$/i;
+const validStops = (v: unknown) =>
+  Array.isArray(v) &&
+  v.length >= 2 &&
+  v.length <= 10 &&
+  v.every((s) => s && typeof s === 'object' && HEX.test((s as GradientStop).color) && Number.isFinite((s as GradientStop).at) && (s as GradientStop).at >= 0 && (s as GradientStop).at <= 100);
+
+/** "Load example": a softer three-stop linear gradient. */
+const EXAMPLE = { kind: 'linear' as const, angle: 120, stops: [{ color: '#a5f3fc', at: 0 }, { color: '#818cf8', at: 55 }, { color: '#f0abfc', at: 100 }] };
+
 export default function GradientTool() {
-  const [kind, setKind] = useState<GradientKind>('linear');
-  const [angle, setAngle] = useState(135);
-  const [stops, setStops] = useState<GradientStop[]>(PRESETS[0]!.stops);
+  const [kind, setKind] = useSaved<GradientKind>('kind', 'linear', (v) => KINDS.includes(v as GradientKind));
+  const [angle, setAngle] = useSaved('angle', 135, (v) => Number.isFinite(v) && (v as number) >= 0 && (v as number) <= 360);
+  const [stops, setStops] = useSaved<GradientStop[]>('stops', PRESETS[0]!.stops, validStops);
 
   const css = useMemo(() => gradientCss(kind, angle, stops), [kind, angle, stops]);
   const declaration = `background: ${css};`;
+  const stylesheet = `.gradient {\n  ${declaration}\n}\n`;
   const update = (i: number, patch: Partial<GradientStop>) => setStops(stops.map((s, j) => (j === i ? { ...s, ...patch } : s)));
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-3 py-2.5">
+      <ToolBar onExample={() => (setKind(EXAMPLE.kind), setAngle(EXAMPLE.angle), setStops(EXAMPLE.stops))}>
         <ToggleGroup type="single" variant="outline" size="sm" value={kind} onValueChange={(v) => v && setKind(v as GradientKind)} aria-label="Gradient type">
           <ToggleGroupItem value="linear">Linear</ToggleGroupItem>
           <ToggleGroupItem value="radial">Radial</ToggleGroupItem>
@@ -40,7 +54,7 @@ export default function GradientTool() {
             <span className="w-10 font-mono text-[13px]">{angle}°</span>
           </div>
         )}
-        <div className="ml-auto flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           {PRESETS.map((p) => (
             <button
               key={p.name}
@@ -53,7 +67,7 @@ export default function GradientTool() {
             />
           ))}
         </div>
-      </div>
+      </ToolBar>
 
       <div className="h-56 border-b sm:h-72" style={{ background: css }} aria-label="Gradient preview" role="img" />
 
@@ -78,9 +92,14 @@ export default function GradientTool() {
         <div className="p-4">
           <div className="flex items-center justify-between">
             <p className="font-mono text-[11.5px] text-faint">css</p>
-            <IconButton label="Copy CSS" onClick={() => copyText(declaration, 'CSS copied')}>
-              <Copy />
-            </IconButton>
+            <div className="flex items-center gap-0.5">
+              <IconButton label="Copy CSS" onClick={() => copyText(declaration, 'CSS copied')}>
+                <Copy />
+              </IconButton>
+              <IconButton label="Download gradient.css" onClick={() => downloadFile(stylesheet, 'gradient.css', 'text/css;charset=utf-8')}>
+                <Download />
+              </IconButton>
+            </div>
           </div>
           <pre className="mt-2 rounded-lg border bg-background p-3 font-mono text-[13px] break-all whitespace-pre-wrap" aria-label="Gradient CSS">
             {declaration}

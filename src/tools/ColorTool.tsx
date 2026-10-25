@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Copy } from 'lucide-react';
 import { contrast, formats, harmonies, parseColor, tintsAndShades, toHex, wcagLevel, type Rgba } from '@/lib/color';
 import { cn } from '@/lib/utils';
 import { IconButton, StatusLine, copyText } from './shared';
 import ToolBar from './ToolBar';
+import { useSaved } from './saved';
 
 const WHITE: Rgba = { r: 255, g: 255, b: 255, a: 1 };
 const BLACK: Rgba = { r: 0, g: 0, b: 0, a: 1 };
@@ -39,19 +40,22 @@ function ContrastCard({ color, against, name }: { color: Rgba; against: Rgba; na
 }
 
 export default function ColorTool() {
-  const [input, setInput] = useState('#3b82f6');
+  const [input, setInput] = useSaved('color', '#3b82f6', (v) => (v as string).length <= 200);
   const color = useMemo(() => parseColor(input), [input]);
 
   return (
     <>
       <ToolBar onExample={() => setInput('oklch(70% 0.15 160)')}>
-        <input
-          type="color"
-          value={color ? toHex({ ...color, a: 1 }) : '#000000'}
-          onChange={(e) => setInput(e.target.value)}
-          aria-label="Pick a color"
-          className="size-9 cursor-pointer rounded-md border bg-transparent"
-        />
+        <label className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border bg-background py-1 pr-3 pl-1 text-[13px] text-muted-foreground transition-colors hover:text-foreground focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+          <input
+            type="color"
+            value={color ? toHex({ ...color, a: 1 }) : '#000000'}
+            onChange={(e) => setInput(e.target.value)}
+            aria-label="Pick a color"
+            className="size-7 cursor-pointer rounded-md border-0 bg-transparent p-0"
+          />
+          Pick a color
+        </label>
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}

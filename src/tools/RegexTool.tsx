@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { FLAGS, MAX_MATCHES } from '@/lib/regex';
 import { REGEX_TIMEOUT_MS, useRegex } from '@/lib/useRegex';
 import { Label } from '@/components/ui/label';
@@ -6,8 +6,9 @@ import { Switch } from '@/components/ui/switch';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import CodeEditor from './CodeEditor';
-import { OutputActions, Panel, StatusLine } from './shared';
+import { InputActions, OutputActions, Panel, StatusLine } from './shared';
 import ToolBar from './ToolBar';
+import { useSaved, useSavedStatus } from './saved';
 
 const EXAMPLE = {
   pattern: '(?<user>[\\w.+-]+)@(?<domain>[\\w-]+\\.[\\w.]+)',
@@ -22,24 +23,39 @@ const LIST_LIMIT = 300;
 const show = (s: string) => (s === '' ? '(empty)' : s.replace(/\n/g, '↵').replace(/\t/g, '→'));
 
 export default function RegexTool() {
-  const [pattern, setPattern] = useState('');
-  const [flags, setFlags] = useState<string[]>(['g']);
-  const [text, setText] = useState('');
-  const [replaceOn, setReplaceOn] = useState(false);
-  const [replacement, setReplacement] = useState('');
+  const [pattern, setPattern] = useSaved('pattern', '');
+  const [flags, setFlags] = useSaved<string[]>('flags', ['g'], (v) => Array.isArray(v) && v.every((f) => FLAGS.some((x) => x.flag === f)));
+  const [text, setText] = useSaved('text', '');
+  const [replaceOn, setReplaceOn] = useSaved('replaceOn', false);
+  const [replacement, setReplacement] = useSaved('replacement', '');
 
   const flagString = FLAGS.map((f) => f.flag).filter((f) => flags.includes(f)).join('');
+  // Bumped to run the same request again
+  const [attempt, setAttempt] = useState(0);
   const request = useMemo(
-    () => ({ pattern, flags: flagString, text, replacement: replaceOn ? replacement : null }),
-    [pattern, flagString, text, replaceOn, replacement],
+    () => ({ pattern, flags: flagString, text, replacement: replaceOn ? replacement : null, attempt }),
+    [pattern, flagString, text, replaceOn, replacement, attempt],
   );
   const state = useRegex(request);
+  // A restored input runs while the page is still loading, and the worker's start-up counts against
+  // the time limit; so the first run gets one retry before it's called catastrophic
+  const { restored } = useSavedStatus();
+  const firstRun = useRef(true);
+  useEffect(() => {
+    if (state.status === 'done') firstRun.current = false;
+    if (state.status === 'timeout' && firstRun.current && restored) {
+      firstRun.current = false;
+      setAttempt((a) => a + 1);
+    }
+  }, [state, restored]);
   const result = state.status === 'done' ? state.result : null;
   // Highlights only for the text they were computed on
   const highlights = useMemo(
     () => (state.status === 'done' && state.result.ok && state.text === text ? state.result.matches.map((m) => ({ from: m.start, to: m.end })) : null),
     [state, text],
   );
+
+  const matchList = useMemo(() => (result?.ok ? result.matches.map((m) => m.value).join('\n') : ''), [result]);
 
   const status = (() => {
     if (!pattern) return <StatusLine tone="muted">Write a pattern, paste text to test it on, or load the example.</StatusLine>;
@@ -129,7 +145,11 @@ export default function RegexTool() {
       {status}
 
       <div className={replaceOn ? 'tool-panes' : undefined}>
-        <Panel title="test text">
+        <Panel
+          title="test text"
+          onFile={setText}
+          actions={<InputActions onLoad={setText} onClear={() => setText('')} canClear={!!text} accept="text/*,.txt,.log,.csv,.md,.json" />}
+        >
           <CodeEditor
             value={text}
             onChange={setText}
@@ -148,6 +168,15 @@ export default function RegexTool() {
         )}
       </div>
 
+      {result?.ok && result.matches.length > 0 && (
+        <div className="flex h-11 items-center gap-2 border-t px-3">
+          <span className="font-mono text-[12.5px] text-muted-foreground">matches</span>
+          <span className="font-mono text-[11.5px] text-faint">one per line</span>
+          <div className="ml-auto flex items-center gap-0.5">
+            <OutputActions text={matchList} fileName="regex-results.txt" mime="text/plain" />
+          </div>
+        </div>
+      )}
       {result?.ok && result.matches.length > 0 && (
         <div className="max-h-96 overflow-auto border-t">
           <table className="w-full text-left text-[13px]" aria-label="Matches">

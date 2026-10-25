@@ -7,14 +7,18 @@ import { Switch } from '@/components/ui/switch';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import CodeEditor from './CodeEditor';
 import { OutputActions, Panel, StatusLine } from './shared';
+import ToolBar from './ToolBar';
+import { useSaved } from './saved';
 
 const LIMITS: Record<LoremUnit, number> = { paragraphs: 100, sentences: 500, words: 5000 };
+const UNITS = Object.keys(LIMITS) as LoremUnit[];
 
 export default function LoremTool() {
-  const [unit, setUnit] = useState<LoremUnit>('paragraphs');
-  const [count, setCount] = useState(3);
-  const [classic, setClassic] = useState(true);
-  const [html, setHtml] = useState(false);
+  const [unit, setUnit] = useSaved<LoremUnit>('unit', 'paragraphs', (v) => UNITS.includes(v as LoremUnit));
+  const [savedCount, setCount] = useSaved('count', 3, (v) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= LIMITS.words);
+  const count = Math.min(savedCount, LIMITS[unit]);
+  const [classic, setClassic] = useSaved('classic', true);
+  const [html, setHtml] = useSaved('html', false);
   const [seed, setSeed] = useState(1);
   // A random seed once in the browser, so each visit gets different text
   useEffect(() => setSeed(Math.floor(Math.random() * 2 ** 31)), []);
@@ -30,7 +34,14 @@ export default function LoremTool() {
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-3 py-2.5">
+      <ToolBar
+        onExample={() => (setUnit('paragraphs'), setCount(2), setClassic(true), setHtml(true))}
+        extra={
+          <Button variant="outline" size="sm" onClick={() => setSeed(Math.floor(Math.random() * 2 ** 31))}>
+            <RefreshCw /> Regenerate
+          </Button>
+        }
+      >
         <input
           type="number"
           min={1}
@@ -57,10 +68,7 @@ export default function LoremTool() {
             HTML
           </Label>
         </div>
-        <Button variant="outline" size="sm" className="ml-auto" onClick={() => setSeed(Math.floor(Math.random() * 2 ** 31))}>
-          <RefreshCw /> Regenerate
-        </Button>
-      </div>
+      </ToolBar>
       <StatusLine tone="ok">
         {words.toLocaleString()} words · {text.length.toLocaleString()} characters
       </StatusLine>

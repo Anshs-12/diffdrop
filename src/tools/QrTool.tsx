@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react';
-import { Download } from 'lucide-react';
+import { toast } from 'sonner';
+import { Copy, Download } from 'lucide-react';
 import { makeQr, qrSvg, QR_TEMPLATES, type Ecc } from '@/lib/qr';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { SITE_URL } from '@/site';
-import { StatusLine, downloadFile } from './shared';
+import { IconButton, StatusLine, downloadFile } from './shared';
+import ToolBar from './ToolBar';
+import { useSaved } from './saved';
 
 type Kind = 'text' | 'wifi' | 'email' | 'phone';
 
@@ -25,8 +28,8 @@ function Field({ id, label, children }: { id: string; label: string; children: R
   );
 }
 
-/** Draw the SVG onto a canvas and save it as PNG. */
-async function downloadPng(svg: string, size: number) {
+/** Draw the SVG onto a canvas at `size` pixels and return it as PNG. */
+async function renderPng(svg: string, size: number): Promise<Blob> {
   const img = new Image();
   img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   await img.decode();
@@ -35,26 +38,55 @@ async function downloadPng(svg: string, size: number) {
   const ctx = canvas.getContext('2d')!;
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(img, 0, 0, size, size);
-  canvas.toBlob((blob) => blob && downloadFile(blob, 'qr-code.png', 'image/png'), 'image/png');
+  return new Promise((resolve, reject) => canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('PNG failed'))), 'image/png'));
 }
 
+async function downloadPng(svg: string, size: number) {
+  downloadFile(await renderPng(svg, size), 'qr-code.png', 'image/png');
+}
+
+/** Put the code on the clipboard as a PNG image, to paste into a document or chat. */
+async function copyPng(svg: string, size: number) {
+  try {
+    // The promise goes straight into ClipboardItem so Safari keeps the click's permission
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': renderPng(svg, size) })]);
+    toast.success('Image copied');
+  } catch {
+    toast.error('This browser can’t copy images; download the PNG instead');
+  }
+}
+
+const KINDS: Kind[] = ['text', 'wifi', 'email', 'phone'];
+const SECURITY = ['WPA', 'WEP', 'nopass'];
+const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+const validNetwork = (v: unknown) => isObject(v) && typeof v.ssid === 'string' && SECURITY.includes(v.security as string) && typeof v.hidden === 'boolean';
+const validEmail = (v: unknown) => isObject(v) && typeof v.to === 'string' && typeof v.subject === 'string' && typeof v.body === 'string';
+const validHex = (v: unknown) => HEX.test(v as string);
+
+/** "Load example": a guest Wi-Fi code, the kind people print for a café table. */
+const EXAMPLE_WIFI = { ssid: 'Cafe Guest', password: 'coffee-and-cake', security: 'WPA' as const, hidden: false };
+
 export default function QrTool() {
-  const [kind, setKind] = useState<Kind>('text');
-  const [text, setText] = useState(`${SITE_URL}/`);
-  const [wifi, setWifi] = useState({ ssid: '', password: '', security: 'WPA' as 'WPA' | 'WEP' | 'nopass', hidden: false });
-  const [email, setEmail] = useState({ to: '', subject: '', body: '' });
-  const [phone, setPhone] = useState('');
-  const [ecc, setEcc] = useState<Ecc>('M');
-  const [fg, setFg] = useState('#000000');
-  const [bg, setBg] = useState('#ffffff');
-  const [size, setSize] = useState(512);
+  const [kind, setKind] = useSaved<Kind>('kind', 'text', (v) => KINDS.includes(v as Kind));
+  const [text, setText] = useSaved('text', `${SITE_URL}/`);
+  // The Wi-Fi password stays out of storage and share links; the rest of the network is kept
+  const [network, setNetwork] = useSaved('wifi', { ssid: '', security: 'WPA' as 'WPA' | 'WEP' | 'nopass', hidden: false }, validNetwork);
+  const [wifiPassword, setWifiPassword] = useState('');
+  const wifi = { ...network, password: wifiPassword };
+  const setWifi = ({ password, ...rest }: typeof wifi) => (setNetwork(rest), setWifiPassword(password));
+  const [email, setEmail] = useSaved('email', { to: '', subject: '', body: '' }, validEmail);
+  const [phone, setPhone] = useSaved('phone', '');
+  const [ecc, setEcc] = useSaved<Ecc>('ecc', 'M', (v) => ['L', 'M', 'Q', 'H'].includes(v as string));
+  const [fg, setFg] = useSaved('fg', '#000000', validHex);
+  const [bg, setBg] = useSaved('bg', '#ffffff', validHex);
+  const [size, setSize] = useSaved('size', 512, (v) => Number.isInteger(v) && (v as number) >= 128 && (v as number) <= 2048);
 
   const payload = useMemo(() => {
-    if (kind === 'wifi') return wifi.ssid ? QR_TEMPLATES.wifi(wifi.ssid, wifi.password, wifi.security, wifi.hidden) : '';
+    if (kind === 'wifi') return network.ssid ? QR_TEMPLATES.wifi(network.ssid, wifiPassword, network.security, network.hidden) : '';
     if (kind === 'email') return email.to ? QR_TEMPLATES.email(email.to, email.subject, email.body) : '';
     if (kind === 'phone') return phone.trim() ? QR_TEMPLATES.phone(phone) : '';
     return text;
-  }, [kind, text, wifi, email, phone]);
+  }, [kind, text, network, wifiPassword, email, phone]);
 
   const qr = useMemo(() => (payload ? makeQr(payload, ecc) : null), [payload, ecc]);
   const colors = { fg: HEX.test(fg) ? fg : '#000000', bg: HEX.test(bg) ? bg : '#ffffff' };
@@ -62,14 +94,14 @@ export default function QrTool() {
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-3 py-2.5">
+      <ToolBar onExample={() => (setKind('wifi'), setWifi(EXAMPLE_WIFI))}>
         <ToggleGroup type="single" variant="outline" size="sm" value={kind} onValueChange={(v) => v && setKind(v as Kind)} aria-label="Content">
           <ToggleGroupItem value="text">Link or text</ToggleGroupItem>
           <ToggleGroupItem value="wifi">Wi-Fi</ToggleGroupItem>
           <ToggleGroupItem value="email">Email</ToggleGroupItem>
           <ToggleGroupItem value="phone">Phone</ToggleGroupItem>
         </ToggleGroup>
-      </div>
+      </ToolBar>
       {!payload && <StatusLine tone="muted">Fill in the details to make a QR code.</StatusLine>}
       {qr && !qr.ok && <StatusLine tone="error">{qr.message}</StatusLine>}
       {qr?.ok && (
@@ -156,7 +188,10 @@ export default function QrTool() {
           {svg ? (
             <>
               <img src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`} alt="QR code" className="aspect-square w-full max-w-[300px] rounded-lg border" style={{ imageRendering: 'pixelated' }} />
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                <IconButton label="Copy image" onClick={() => void copyPng(svg, size)}>
+                  <Copy />
+                </IconButton>
                 <Button variant="outline" size="sm" onClick={() => void downloadPng(svg, size)}>
                   <Download /> PNG
                 </Button>

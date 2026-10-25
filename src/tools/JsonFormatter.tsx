@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef } from 'react';
 import { stringifyJson, type Indent } from '@/lib/jsonTools';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -7,6 +7,7 @@ import CodeEditor, { type CodeEditorHandle } from './CodeEditor';
 import { InputActions, JsonStatusLine, OutputActions, Panel, byteLength, formatBytes, useJsonInput } from './shared';
 import { EXAMPLE_JSON } from './content';
 import ToolBar from './ToolBar';
+import { useSaved } from './saved';
 
 const INDENTS: { value: Indent; label: string }[] = [
   { value: 2, label: '2 spaces' },
@@ -17,8 +18,8 @@ const INDENTS: { value: Indent; label: string }[] = [
 
 export default function JsonFormatter() {
   const { text, setText, parsed } = useJsonInput();
-  const [indent, setIndent] = useState<Indent>(2);
-  const [sort, setSort] = useState(false);
+  const [indent, setIndent] = useSaved<Indent>('indent', 2, (v) => INDENTS.some((i) => i.value === v));
+  const [sort, setSort] = useSaved('sort', false);
   const inputRef = useRef<CodeEditorHandle>(null);
 
   const output = useMemo(
@@ -54,6 +55,7 @@ export default function JsonFormatter() {
       <div className="tool-panes">
         <Panel
           title="input"
+          onFile={setText}
           meta={text ? formatBytes(byteLength(text)) : undefined}
           actions={<InputActions onLoad={setText} onClear={() => setText('')} canClear={!!text} />}
         >

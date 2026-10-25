@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   ArrowUp,
-  Bug,
   Check,
   Columns2,
   Eraser,
@@ -17,9 +16,6 @@ import {
   WrapText,
 } from 'lucide-react';
 import { pageById, REPO_URL, type PageId } from '@/site';
-import { TOOL_GROUPS } from './ToolShell';
-import { Button } from '@/components/ui/button';
-import { GitHubIcon } from './Icons';
 
 const Key: React.FC<{ children: React.ReactNode }> = ({ children }) => <kbd className="kbd-inline">{children}</kbd>;
 
@@ -253,61 +249,44 @@ export const Paywall: React.FC = () => (
 
 const external = { target: '_blank', rel: 'noopener noreferrer' } as const;
 
-export const Footer: React.FC<{ current: PageId }> = ({ current }) => (
-  <footer className="border-t">
-    <nav className="page grid grid-cols-2 gap-x-6 gap-y-8 pt-12 pb-8 sm:grid-cols-4 lg:grid-cols-8" aria-label="Tools">
-      {TOOL_GROUPS.map((g) => (
-        <div key={g.label}>
-          <p className="mb-2 font-mono text-[11.5px] text-faint">{g.label.toLowerCase()}</p>
-          <ul className="space-y-1.5 text-[13.5px]">
-            {g.ids.map((id) => (
-              <li key={id}>
-                {id === current ? (
-                  <span className="font-medium" aria-current="page">
-                    {pageById(id).name}
-                  </span>
-                ) : (
-                  <a href={pageById(id).path} className="text-muted-foreground hover:text-foreground">
-                    {pageById(id).name}
-                  </a>
-                )}
-              </li>
-            ))}
-          </ul>
+export const Footer: React.FC<{ current: PageId }> = ({ current }) => {
+  const links: { label: string; href: string; id?: PageId; out?: boolean }[] = [
+    { label: 'All tools', href: '/', id: 'home' },
+    { label: 'About', href: pageById('about').path, id: 'about' },
+    { label: 'Contact', href: pageById('contact').path, id: 'contact' },
+    { label: 'GitHub', href: REPO_URL, out: true },
+    { label: 'Report a bug or request a feature', href: `${REPO_URL}/issues`, out: true },
+  ];
+  return (
+    <footer className="mt-8 border-t">
+      <div className="page flex flex-col gap-6 py-10 md:flex-row md:items-start md:justify-between">
+        <div className="max-w-[36ch]">
+          <a href="/" className="inline-flex items-center gap-2 text-[16px] font-semibold tracking-[-0.02em]">
+            <img src="/icon.svg" alt="" width={22} height={22} className="rounded-md" />
+            toolspace
+          </a>
+          <p className="mt-2 text-[13.5px] text-muted-foreground">Free, open source developer tools that run in your browser. No sign-up, no uploads.</p>
         </div>
-      ))}
-    </nav>
-    <div className="page flex flex-wrap items-center gap-x-6 gap-y-4 border-t border-dashed py-6">
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <a href="/" className="text-[17px] font-semibold tracking-[-0.02em]">
-          toolspace
-        </a>
-        <span className="font-mono text-xs text-muted-foreground">free, unlimited, and everything stays in this tab</span>
-      </div>
-      <nav className="ml-auto flex flex-wrap items-center gap-1" aria-label="Footer">
-        {(['about', 'contact'] as const).map((id) => (
-          <Button key={id} asChild variant="ghost" size="sm" className="font-normal text-muted-foreground">
-            <a href={pageById(id).path} aria-current={current === id ? 'page' : undefined}>
-              {pageById(id).name}
+        <nav className="grid grid-cols-2 gap-x-6 gap-y-2.5 text-[14px] sm:flex sm:flex-wrap sm:gap-x-6" aria-label="Footer">
+          {links.map((l) => (
+            <a
+              key={l.label}
+              href={l.href}
+              {...(l.out ? external : {})}
+              aria-current={l.id && l.id === current ? 'page' : undefined}
+              className="text-muted-foreground transition-colors last:col-span-2 hover:text-foreground aria-[current=page]:text-foreground"
+            >
+              {l.label}
             </a>
-          </Button>
-        ))}
-        <Button asChild variant="ghost" size="sm" className="font-normal text-muted-foreground">
-          <a href={REPO_URL} {...external}>
-            <GitHubIcon className="size-3.5" /> GitHub
-          </a>
-        </Button>
-        <Button asChild variant="ghost" size="sm" className="font-normal text-muted-foreground">
-          <a href={`${REPO_URL}/issues`} {...external}>
-            <Bug /> report a bug / request a feature
-          </a>
-        </Button>
-        <Button asChild variant="outline" size="sm" className="rounded-full font-normal">
-          <a href="#top">
-            Top <ArrowUp />
-          </a>
-        </Button>
-      </nav>
-    </div>
-  </footer>
-);
+          ))}
+        </nav>
+      </div>
+      <div className="page flex items-center justify-between gap-4 border-t py-5 text-[12.5px] text-muted-foreground">
+        <span>MIT licensed · everything runs in your browser</span>
+        <a href="#top" className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap hover:text-foreground">
+          Back to top <ArrowUp className="size-3.5" aria-hidden="true" />
+        </a>
+      </div>
+    </footer>
+  );
+};

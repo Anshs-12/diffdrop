@@ -255,11 +255,25 @@ df.to_csv("data.csv", index=False, encoding="utf-8-sig")`}</Code>
           <summary>Your data stays on your device</summary>
           <p>
             Every tool does its work in your browser. The text you paste, the files you open, and the tokens, passwords and
-            colors you work with are processed in the tab and never sent to a server. Close the tab and they are gone.
+            colors you work with are processed in the tab and never sent to a server.
           </p>
           <p>
-            Files are read locally and never uploaded. Share links in the diff checker keep both texts in the part of the
-            address after #, which browsers never send to any server.
+            So you don’t have to paste it again, most tools keep your last input in this browser’s storage, on your device
+            only. The “Forget input” button on a tool removes it. The password generator and JWT decoder never keep anything.
+          </p>
+          <p>
+            Files are read locally and never uploaded. Share links keep the input in the part of the address after #, which
+            browsers don’t send to servers. Anyone you give a link to can read what’s in it, and it stays in your browser
+            history, so don’t share links that contain secrets.
+          </p>
+        </details>
+
+        <details>
+          <summary>Works offline</summary>
+          <p>
+            After your first visit, the site keeps a copy of itself in your browser, so the tools work without a connection.
+            The code beautifier’s larger language engines are saved the first time you use each one. You can also install
+            toolspace as an app from your browser’s menu.
           </p>
         </details>
 

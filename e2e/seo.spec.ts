@@ -38,7 +38,7 @@ test.describe('search and sharing', () => {
   test('header and footer link to GitHub, issues and the JSON page', async ({ page }) => {
     await page.goto('/');
     const footer = page.getByRole('navigation', { name: 'Footer' });
-    await expect(footer.getByRole('link', { name: 'report a bug / request a feature' })).toHaveAttribute('href', /github\.com\/.+\/issues$/);
+    await expect(footer.getByRole('link', { name: 'Report a bug or request a feature' })).toHaveAttribute('href', /github\.com\/.+\/issues$/);
     await expect(footer.getByRole('link', { name: 'GitHub' })).toHaveAttribute('target', '_blank');
     await expect(page.getByRole('link', { name: 'toolspace on GitHub' })).toHaveAttribute('rel', 'noopener noreferrer');
     await expect(page.getByRole('banner').getByRole('link', { name: 'open source', exact: true })).toHaveAttribute('href', /github\.com\/Anshs-12\/diffdrop$/);

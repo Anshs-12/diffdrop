@@ -1,8 +1,9 @@
 import React from 'react';
 import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import SavedControls from './SavedControls';
 
-/** Options row above a tool, with a "Load example" button at the end. */
+/** Options row above a tool, ending with Share / Forget input (where the page saves input) and "Load example". */
 export default function ToolBar({
   children,
   onExample,
@@ -18,6 +19,7 @@ export default function ToolBar({
       {children}
       <div className="ml-auto flex flex-wrap items-center gap-2">
         {extra}
+        <SavedControls />
         <Button variant="outline" size="sm" onClick={onExample}>
           <Sparkles /> Load example
         </Button>

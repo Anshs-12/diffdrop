@@ -1,15 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { CASE_MODES, convertCase, type CaseMode } from '@/lib/textCase';
 import { cn } from '@/lib/utils';
 import CodeEditor from './CodeEditor';
 import { InputActions, OutputActions, Panel } from './shared';
 import ToolBar from './ToolBar';
+import { useSaved } from './saved';
 
 const EXAMPLE = 'The quick brown fox jumps over the lazy dog.\nparseHTTPRequest\nuser_account_id';
 
 export default function CaseTool() {
-  const [text, setText] = useState('');
-  const [mode, setMode] = useState<CaseMode>('title');
+  const [text, setText] = useSaved('text', '');
+  const [mode, setMode] = useSaved<CaseMode>('mode', 'title', (v) => CASE_MODES.some((m) => m.mode === v));
   const output = useMemo(() => convertCase(text, mode), [text, mode]);
 
   return (
@@ -33,7 +34,7 @@ export default function CaseTool() {
         ))}
       </div>
       <div className="tool-panes">
-        <Panel title="text" actions={<InputActions onLoad={setText} onClear={() => setText('')} canClear={!!text} accept="text/*,.txt,.md,.csv" />}>
+        <Panel title="text" onFile={setText} actions={<InputActions onLoad={setText} onClear={() => setText('')} canClear={!!text} accept="text/*,.txt,.md,.csv" />}>
           <CodeEditor value={text} onChange={setText} lang={null} wrap placeholder="Type or paste text to convert" ariaLabel="Text to convert" className="tool-editor" />
         </Panel>
         <Panel title={CASE_MODES.find((m) => m.mode === mode)!.label} actions={<OutputActions text={output} fileName="converted.txt" mime="text/plain" />}>

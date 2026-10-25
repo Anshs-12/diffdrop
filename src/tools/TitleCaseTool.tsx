@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { TITLE_STYLES, titleCase, type TitleStyle } from '@/lib/textCase';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import CodeEditor from './CodeEditor';
 import { InputActions, OutputActions, Panel, StatusLine } from './shared';
 import ToolBar from './ToolBar';
+import { useSaved } from './saved';
 
 const EXAMPLE = [
   'a tale of two cities and the war between them',
@@ -13,8 +14,8 @@ const EXAMPLE = [
 ].join('\n');
 
 export default function TitleCaseTool() {
-  const [text, setText] = useState('');
-  const [style, setStyle] = useState<TitleStyle>('chicago');
+  const [text, setText] = useSaved('text', '');
+  const [style, setStyle] = useSaved<TitleStyle>('style', 'chicago', (v) => TITLE_STYLES.some((s) => s.style === v));
   const output = useMemo(() => titleCase(text, style), [text, style]);
 
   return (
@@ -30,7 +31,7 @@ export default function TitleCaseTool() {
       </ToolBar>
       <StatusLine tone="muted">{TITLE_STYLES.find((s) => s.style === style)!.rule}</StatusLine>
       <div className="tool-panes">
-        <Panel title="titles" actions={<InputActions onLoad={setText} onClear={() => setText('')} canClear={!!text} accept="text/*,.txt,.md,.csv" />}>
+        <Panel title="titles" onFile={setText} actions={<InputActions onLoad={setText} onClear={() => setText('')} canClear={!!text} accept="text/*,.txt,.md,.csv" />}>
           <CodeEditor value={text} onChange={setText} lang={null} wrap placeholder="Paste titles or headlines, one per line" ariaLabel="Titles" className="tool-editor" />
         </Panel>
         <Panel title="title case" actions={<OutputActions text={output} fileName="titles.txt" mime="text/plain" />}>

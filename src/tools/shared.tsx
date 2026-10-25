@@ -6,6 +6,7 @@ import { parseJson, scanJson, type JsonScan } from '@/lib/jsonValue';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useSaved } from './saved';
 
 /** Inputs above this size are parsed after a short pause instead of on every keystroke. */
 const LARGE_INPUT = 200_000;
@@ -16,10 +17,10 @@ export type Parsed =
   | { status: 'valid'; value: unknown; scan: JsonScan }
   | { status: 'invalid'; check: Extract<JsonCheck, { status: 'invalid' }> };
 
-/** JSON text plus its parsed value (or the error), re-parsed as the text changes. */
+/** JSON text plus its parsed value (or the error), re-parsed as the text changes. Saved in this browser (see saved.ts). */
 export function useJsonInput(initial = '') {
-  const [text, setText] = useState(initial);
-  const [settled, setSettled] = useState(initial);
+  const [text, setText] = useSaved('input', initial);
+  const [settled, setSettled] = useState(text);
 
   useEffect(() => {
     if (text.length < LARGE_INPUT) {
@@ -54,22 +55,67 @@ export function formatBytes(n: number): string {
 
 export const byteLength = (s: string) => new TextEncoder().encode(s).length;
 
-/** A labelled box holding an editor, with actions in its header. */
+/** Reads a dropped or picked file as text, refusing files over 50 MB. */
+export async function readTextFile(file: File): Promise<string | null> {
+  if (file.size > MAX_FILE_BYTES) {
+    toast.error(`${file.name} is larger than 50 MB`);
+    return null;
+  }
+  return file.text();
+}
+
+/**
+ * A labelled box holding an editor, with actions in its header. With `onFile`,
+ * a text file dropped anywhere on the box is read (locally) into the input.
+ */
 export function Panel({
   title,
   meta,
   actions,
   children,
   className,
+  onFile,
 }: {
   title: string;
   meta?: React.ReactNode;
   actions?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  onFile?: (text: string) => void;
 }) {
+  const [over, setOver] = useState(false);
+  const hasFiles = (e: React.DragEvent) => Array.from(e.dataTransfer.types).includes('Files');
+  const drop = onFile
+    ? {
+        onDragOverCapture: (e: React.DragEvent) => {
+          if (!hasFiles(e)) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+          setOver(true);
+        },
+        onDragLeave: (e: React.DragEvent) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOver(false);
+        },
+        onDropCapture: async (e: React.DragEvent) => {
+          if (!hasFiles(e)) return;
+          // The file replaces the input; the editor mustn't also insert it
+          e.preventDefault();
+          e.stopPropagation();
+          setOver(false);
+          const file = e.dataTransfer.files[0];
+          if (!file) return;
+          const text = await readTextFile(file);
+          if (text != null) onFile(text);
+        },
+      }
+    : {};
   return (
-    <div className={cn('flex min-w-0 flex-col', className)}>
+    <div className={cn('relative flex min-w-0 flex-col', className)} {...drop}>
+      {over && (
+        <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center border-2 border-dashed border-foreground/40 bg-background/80 text-[13px] font-medium" aria-hidden="true">
+          Drop the file to open it
+        </div>
+      )}
       <div className="flex h-11 items-center gap-2 border-b px-3">
         <span className="font-mono text-[12.5px] text-muted-foreground">{title}</span>
         {meta && <span className="font-mono text-[11.5px] text-faint tabular-nums">{meta}</span>}
@@ -134,11 +180,8 @@ export function InputActions({
           const file = e.target.files?.[0];
           e.target.value = '';
           if (!file) return;
-          if (file.size > MAX_FILE_BYTES) {
-            toast.error(`${file.name} is larger than 50 MB`);
-            return;
-          }
-          onLoad(await file.text());
+          const text = await readTextFile(file);
+          if (text != null) onLoad(text);
         }}
       />
     </>

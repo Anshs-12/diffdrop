@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { IconButton, StatusLine } from './shared';
 import ToolBar from './ToolBar';
+import { useSaved } from './saved';
 
 const UTC = 'UTC';
 
@@ -64,26 +65,43 @@ function Row({ label, value, hint }: { label: string; value: string; hint?: stri
 }
 
 const UNITS: (TimeUnit | 'auto')[] = ['auto', 's', 'ms', 'us', 'ns'];
+
+/** A time zone name this browser can format with. */
+function knownZone(v: unknown): boolean {
+  if (typeof v !== 'string') return false;
+  if (!v) return true;
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: v });
+    return true;
+  } catch {
+    return false;
+  }
+}
 const UNIT_LABELS: Record<TimeUnit | 'auto', string> = { auto: 'Auto', s: 's', ms: 'ms', us: 'µs', ns: 'ns' };
 
 export default function TimestampTool() {
-  const [input, setInput] = useState('');
-  const [unit, setUnit] = useState<TimeUnit | 'auto'>('auto');
+  const [input, setInput] = useSaved('input', '');
+  const [unit, setUnit] = useSaved<TimeUnit | 'auto'>('unit', 'auto', (v) => UNITS.includes(v as TimeUnit | 'auto'));
   // Rendered at build time too, so the clock and zone only start in the browser
   const [now, setNow] = useState<number | null>(null);
   const [local, setLocal] = useState(UTC);
-  const [zone, setZone] = useState(UTC);
+  // '' means "this browser's zone", so the saved choice doesn't pin a visitor's own zone
+  const [zoneChoice, setZoneChoice] = useSaved('zone', '', knownZone);
+  const zone = zoneChoice || local;
+  const setZone = (z: string) => setZoneChoice(z === local ? '' : z);
 
   useEffect(() => {
     const z = localZone();
     setLocal(z);
-    setZone(z);
     setNow(Date.now());
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
 
-  const zoneList = useMemo(() => zones(local), [local]);
+  const zoneList = useMemo(() => {
+    const list = zones(local);
+    return list.includes(zone) ? list : [zone, ...list];
+  }, [local, zone]);
   const parsed = useMemo(() => (input.trim() ? parseTime(input, unit) : null), [input, unit]);
   const nowSeconds = now == null ? '…' : String(Math.floor(now / 1000));
 

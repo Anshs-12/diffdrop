@@ -30,14 +30,17 @@ export async function editorText(page: Page, label: 'Original text' | 'Changed t
 
 /**
  * Record requests that could carry data out: anything to another origin, or any
- * non-GET. Lazily loaded code from the site's own /assets/ is not counted.
+ * non-GET, or a GET with a query string. The site's own static files (code,
+ * pages, icons) are plain GETs to the same origin and are not counted.
  */
 export function trackOutgoing(page: Page): string[] {
   const out: string[] = [];
   page.on('request', (r) => {
     const url = new URL(r.url());
-    const ownAsset = url.origin === new URL(page.url()).origin && r.method() === 'GET' && url.pathname.startsWith('/assets/');
-    if (!ownAsset) out.push(`${r.method()} ${r.url()}`);
+    // A tracker started before the first page load sees about:blank, so the page's own navigation counts as same-origin
+    const sameOrigin = url.origin === new URL(page.url()).origin || (r.isNavigationRequest() && page.url() === 'about:blank');
+    const ownFile = sameOrigin && r.method() === 'GET' && !url.search;
+    if (!ownFile) out.push(`${r.method()} ${r.url()}`);
   });
   return out;
 }

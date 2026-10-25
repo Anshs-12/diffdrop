@@ -2,12 +2,17 @@
  * Code formatting. Prettier for JavaScript, TypeScript and web formats;
  * WebAssembly builds of each language's own formatter for the rest
  * (clang-format, gofmt, Ruff, Mago, StyLua, shfmt); sql-formatter and
- * xml-formatter for SQL and XML. Each loads only when its language is used.
+ * a small built-in XML formatter (src/lib/xml.ts) for SQL and XML. Each loads
+ * only when its language is used.
  */
 import * as wasm from './wasmFormatters';
 import { checkJson } from './json';
 import { stringifyJson } from './jsonTools';
 import { parseJson } from './jsonValue';
+import { minifyCss, minifyHtml } from './minify';
+import { formatXml, minifyXml } from './xml';
+
+export { minifyCss, minifyHtml } from './minify';
 
 export type CodeLang =
   | 'javascript'
@@ -124,13 +129,34 @@ export const DEFAULT_INDENT: Record<CodeLang, 2 | 4 | 'tab'> = {
   sql: 2,
 };
 
+/** SQL dialects offered (sql-formatter's names). */
+export const SQL_DIALECTS = [
+  { id: 'sql', label: 'Standard SQL' },
+  { id: 'postgresql', label: 'PostgreSQL' },
+  { id: 'mysql', label: 'MySQL' },
+  { id: 'mariadb', label: 'MariaDB' },
+  { id: 'tsql', label: 'SQL Server (T-SQL)' },
+  { id: 'sqlite', label: 'SQLite' },
+  { id: 'plsql', label: 'Oracle PL/SQL' },
+  { id: 'bigquery', label: 'BigQuery' },
+  { id: 'snowflake', label: 'Snowflake' },
+] as const;
+export type SqlDialect = (typeof SQL_DIALECTS)[number]['id'];
+export type KeywordCase = 'upper' | 'lower' | 'preserve';
+
 export interface FormatOptions {
   indent: 2 | 4 | 'tab';
   /** Line length to wrap at, where the formatter supports it. */
   printWidth: number;
   /** JavaScript, TypeScript and Python: single instead of double quotes. */
   singleQuote: boolean;
+  /** SQL only (defaults: standard SQL, upper case keywords). */
+  sqlDialect?: SqlDialect;
+  keywordCase?: KeywordCase;
 }
+
+/** Languages with a Minify mode. */
+export const MINIFIABLE: ReadonlySet<CodeLang> = new Set(['css', 'json', 'xml', 'html']);
 
 export type FormatResult = { ok: true; text: string } | { ok: false; message: string; line: number | null; column: number | null };
 
@@ -138,11 +164,25 @@ export type FormatResult = { ok: true; text: string } | { ok: false; message: st
 function errorResult(e: unknown): FormatResult {
   const err = e as { message?: string; loc?: { start?: { line: number; column: number } } };
   const raw = err.message ?? String(e);
+  // A formatter engine that couldn't be downloaded (offline before its first use)
+  if (/dynamically imported module|Importing a module script failed|error loading dynamically imported module/i.test(raw)) {
+    return {
+      ok: false,
+      message: 'This language’s formatter couldn’t be downloaded. Each one is saved the first time it’s used online, then works offline.',
+      line: null,
+      column: null,
+    };
+  }
   const first = raw.split('\n').find((l) => l.trim()) ?? raw;
-  const message = first.replace(/\s*\(\d+:\d+\)$/, '');
+  const message = first
+    .replace(/\s*\(\d+:\d+\)$/, '')
+    .replace(/^\w*SyntaxError:\s*/, '')
+    // Prettier's HTML errors end with a long aside and a link
+    .replace(/\s*It may happen when[^.]*\./, '')
+    .replace(/\s*For more info see \S+/, '');
   if (err.loc?.start) return { ok: false, message, line: err.loc.start.line, column: err.loc.start.column };
-  // "line 3, column 7", "3:7: …" and similar
-  const m = /\b(?:line\s+)?(\d+)(?::|,\s*column\s+)(\d+)\b/i.exec(raw);
+  // "line 3, column 7", "line 3 column 7", "3:7: …" and similar
+  const m = /\b(?:line\s+)?(\d+)(?::|,?\s*column\s+)(\d+)\b/i.exec(raw);
   return { ok: false, message, line: m ? Number(m[1]) : null, column: m ? Number(m[2]) : null };
 }
 
@@ -171,6 +211,11 @@ export async function formatCode(code: string, lang: CodeLang, o: FormatOptions)
       case 'cpp':
       case 'java':
       case 'csharp': {
+        // clang-format reformats whatever it's given, so catch broken Java before it does
+        if (lang === 'java') {
+          const bad = checkBrackets(code);
+          if (bad) return bad;
+        }
         const m = await wasm.clangFormat();
         return { ok: true, text: withNewline(m.format(code, CLANG_FILE[lang] as never, clangStyle(lang, o))) };
       }
@@ -191,10 +236,14 @@ export async function formatCode(code: string, lang: CodeLang, o: FormatOptions)
       }
       case 'python': {
         const m = await wasm.ruff();
-        return {
-          ok: true,
-          text: m.format(code, 'main.py', { indent_style: tabs ? 'tab' : 'space', indent_width: width, line_width: o.printWidth, quote_style: o.singleQuote ? 'single' : 'double' }),
-        };
+        try {
+          return {
+            ok: true,
+            text: m.format(code, 'main.py', { indent_style: tabs ? 'tab' : 'space', indent_width: width, line_width: o.printWidth, quote_style: o.singleQuote ? 'single' : 'double' }),
+          };
+        } catch (e) {
+          return byteRangeError(e, code);
+        }
       }
       case 'php': {
         const m = await wasm.mago();
@@ -210,12 +259,16 @@ export async function formatCode(code: string, lang: CodeLang, o: FormatOptions)
       }
       case 'sql': {
         const { format } = await import('sql-formatter');
-        return { ok: true, text: withNewline(format(code, { language: 'sql', tabWidth: width, useTabs: tabs, keywordCase: 'upper' })) };
+        const dialect = o.sqlDialect ?? 'sql';
+        const keywordCase = o.keywordCase ?? 'upper';
+        try {
+          return { ok: true, text: withNewline(format(code, { language: dialect, tabWidth: width, useTabs: tabs, keywordCase, dataTypeCase: keywordCase })) };
+        } catch (e) {
+          return sqlError(e, dialect);
+        }
       }
-      case 'xml': {
-        const { default: xmlFormat } = await import('xml-formatter');
-        return { ok: true, text: withNewline(xmlFormat(code, { indentation: tabs ? '\t' : ' '.repeat(width), collapseContent: true, lineSeparator: '\n' })) };
-      }
+      case 'xml':
+        return formatXml(code, tabs ? '\t' : ' '.repeat(width));
     }
     const { parser, plugins } = langInfo(lang).prettier!;
     const [prettier, ...loaded] = await Promise.all([import('prettier/standalone'), ...plugins.map((p) => PLUGINS[p]())]);
@@ -233,19 +286,107 @@ export async function formatCode(code: string, lang: CodeLang, o: FormatOptions)
   }
 }
 
-/** Minify CSS (comments and needless whitespace removed). */
-export function minifyCss(code: string): string {
-  return code
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/\s+/g, ' ')
-    .replace(/\s*([{}:;,>+~])\s*/g, '$1')
-    .replace(/;}/g, '}')
-    .trim();
+/** Ruff reports "… at byte range 22..23" (UTF-8 offsets); turn that into a line and column. */
+export function byteRangeError(e: unknown, code: string): FormatResult {
+  const r = errorResult(e);
+  if (r.ok) return r;
+  const m = /\s*at byte range (\d+)\.\.\d+/.exec(r.message);
+  if (!m) return r;
+  const prefix = new TextDecoder().decode(new TextEncoder().encode(code).slice(0, Number(m[1])));
+  const line = prefix.split('\n').length;
+  return { ok: false, message: r.message.replace(m[0], ''), line, column: prefix.length - prefix.lastIndexOf('\n') };
 }
+
+/** sql-formatter's parse errors, shortened, with a hint about the dialect. */
+function sqlError(e: unknown, dialect: SqlDialect): FormatResult {
+  const r = errorResult(e);
+  if (r.ok) return r;
+  let message = r.message.replace(/^Parse error:?\s*/i, '').replace(/\s*at line \d+ column \d+\.?$/i, '');
+  if (/«EOF»/.test(message)) message = 'The query ends too early (an unclosed bracket or an unfinished clause?)';
+  else if (/^at token:/i.test(message)) message = `Unexpected ${message.replace(/^at token:\s*/i, '')}`;
+  if (dialect === 'sql') message += '. If this is valid in your database, choose its dialect.';
+  return { ...r, message };
+}
+
+/**
+ * Brackets, braces and parentheses in Java must pair up. Strings, character
+ * literals, text blocks and comments are skipped.
+ */
+export function checkBrackets(code: string): FormatResult | null {
+  const stack: { ch: string; pos: number }[] = [];
+  const pairs: Record<string, string> = { ')': '(', ']': '[', '}': '{' };
+  const lineCol = (pos: number) => {
+    const before = code.slice(0, pos);
+    const line = before.split('\n').length;
+    return { line, column: pos - before.lastIndexOf('\n') };
+  };
+  const fail = (message: string, pos: number): FormatResult => ({ ok: false, message, ...lineCol(pos) });
+  const n = code.length;
+  for (let i = 0; i < n; i++) {
+    const c = code[i]!;
+    if (c === '/' && code[i + 1] === '/') {
+      const nl = code.indexOf('\n', i);
+      i = nl === -1 ? n : nl;
+    } else if (c === '/' && code[i + 1] === '*') {
+      const end = code.indexOf('*/', i + 2);
+      if (end === -1) return fail('Comment is never closed (missing */)', i);
+      i = end + 1;
+    } else if (code.startsWith('"""', i)) {
+      const end = code.indexOf('"""', i + 3);
+      if (end === -1) return fail('Text block is never closed (missing """)', i);
+      i = end + 2;
+    } else if (c === '"' || c === "'") {
+      let j = i + 1;
+      while (j < n && code[j] !== c && code[j] !== '\n') j += code[j] === '\\' ? 2 : 1;
+      if (code[j] !== c) return fail(c === '"' ? 'String is never closed (missing ")' : "Character literal is never closed (missing ')", i);
+      i = j;
+    } else if (c === '(' || c === '[' || c === '{') stack.push({ ch: c, pos: i });
+    else if (c === ')' || c === ']' || c === '}') {
+      const open = stack.pop();
+      if (!open) return fail(`Unexpected ${c}: nothing is open here`, i);
+      if (open.ch !== pairs[c]) return fail(`Unexpected ${c}: the ${open.ch} from line ${lineCol(open.pos).line} is still open`, i);
+    }
+  }
+  const open = stack.pop();
+  return open ? fail(`${open.ch} is never closed`, open.pos) : null;
+}
+
+/**
+ * Minify CSS, JSON, XML or HTML. CSS and HTML are first parsed by Prettier, so
+ * syntax errors are reported instead of being minified.
+ */
+export async function minifyCode(code: string, lang: CodeLang): Promise<FormatResult> {
+  try {
+    switch (lang) {
+      case 'json':
+        try {
+          return { ok: true, text: stringifyJson(parseJson(code), 'minify', false) };
+        } catch {
+          const c = checkJson(code);
+          return c.status === 'invalid' ? { ok: false, message: c.message, line: c.line, column: c.column } : { ok: false, message: 'Invalid JSON', line: null, column: null };
+        }
+      case 'xml':
+        return minifyXml(code);
+      case 'css':
+      case 'html': {
+        const check = await formatCode(code, lang, { indent: 2, printWidth: 80, singleQuote: false });
+        if (!check.ok) return check;
+        return { ok: true, text: lang === 'css' ? minifyCss(code) : minifyHtml(code) };
+      }
+      default:
+        return { ok: false, message: `${langInfo(lang).label} can’t be minified here`, line: null, column: null };
+    }
+  } catch (e) {
+    return errorResult(e);
+  }
+}
+
+/** Only the start of a long file is needed to guess its language. */
+const DETECT_CHARS = 20_000;
 
 /** Guess the language from the code. */
 export function detectLang(code: string): CodeLang {
-  const t = code.trim();
+  const t = code.slice(0, DETECT_CHARS).trim();
   if (!t) return 'javascript';
   if (/^<\?php\b/.test(t)) return 'php';
   if (/^#!.*\b(ba|z|da|k)?sh\b/.test(t)) return 'shell';

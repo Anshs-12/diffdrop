@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   ArrowLeftRight,
+  Eraser,
   ChevronDown,
   ChevronUp,
   Columns2,
@@ -62,6 +63,8 @@ interface ToolbarProps {
   onUndo: () => void;
   onSwap: () => void;
   onShare: () => void;
+  /** Shown when this browser has saved input: removes it and clears both texts. */
+  onForget?: () => void;
   summaryOpen: boolean;
   onToggleSummary: () => void;
   onCopy: () => void;
@@ -228,10 +231,13 @@ const Toolbar: React.FC<ToolbarProps> = (p) => (
           />
         )}
         <ActionButton icon={<ArrowLeftRight />} label="Swap" tip="Swap a and b" onClick={p.onSwap} />
+        {p.onForget && (
+          <ActionButton icon={<Eraser />} label="Forget input" tip="Remove the texts this page keeps in your browser, and clear both sides" onClick={p.onForget} />
+        )}
         <ActionButton
           icon={<Link2 />}
           label="Share"
-          tip="Copy a link with both texts inside. They live after the #, which is never sent to a server."
+          tip="Copy a link with both texts inside. They live after the #, which is never sent to a server, but anyone with the link can read them."
           onClick={p.onShare}
         />
         <ActionButton

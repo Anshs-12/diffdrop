@@ -99,15 +99,18 @@ test('home page shows the "featured on" badges, linking out in a new tab', async
   // The home page never states how many tools there are
   expect(await page.locator('main').innerText()).not.toMatch(/\b\d+\s+tools\b/i);
   const badges = page.getByRole('list', { name: 'Featured on' });
-  const link = badges.getByRole('link', { name: 'Featured on CodeHype' });
-  await expect(link).toHaveAttribute('href', /^https:\/\/www\.codehype\.ai\/product\/toolspace/);
+  const link = badges.getByRole('link', { name: 'Featured on DevHunt' });
+  await expect(link).toHaveAttribute('href', 'https://devhunt.org/tool/toolspace');
   await expect(link).toHaveAttribute('target', '_blank');
   await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   await expect(badges.getByRole('link', { name: 'Featured on FindAlternate' })).toHaveAttribute('href', 'https://www.findalternate.com/toolspace');
-  await expect(badges.getByRole('link', { name: 'Featured on DevHunt' })).toHaveAttribute('href', 'https://devhunt.org/tool/toolspace');
   await expect(badges.getByRole('link', { name: 'Featured on ScrollLaunch' })).toHaveAttribute('href', /^https:\/\/www\.scrolllaunch\.com\/products\/toolspace/);
-  await expect(badges.getByRole('link', { name: 'Featured on Million Dot Homepage' })).toHaveAttribute('href', 'https://milliondothomepage.com/product/toolspace');
   await expect(badges.getByRole('link', { name: 'Featured on DeepLaunch' })).toHaveAttribute('href', 'https://deeplaunch.io');
+  await expect(badges.getByRole('link', { name: 'Featured on CodeHype' })).toHaveAttribute('href', /^https:\/\/www\.codehype\.ai\/product\/toolspace/);
+  // Every badge is shown
+  for (const name of ['Startup Benchmarks', 'Million Dot Homepage', 'ShinyLaunch', 'LaunchClash', 'Startup Fast']) {
+    await expect(badges.getByRole('link', { name: `Featured on ${name}` })).toHaveCount(1);
+  }
   // Long names fit without being cut off
   expect(await badges.locator('.truncate').evaluateAll((els) => els.filter((e) => e.scrollWidth > e.clientWidth).map((e) => e.textContent))).toEqual([]);
 });
