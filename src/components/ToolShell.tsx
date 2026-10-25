@@ -27,6 +27,40 @@ import {
   Sheet,
   ShieldCheck,
   WandSparkles,
+  Ampersand,
+  AppWindow,
+  Atom,
+  Bot,
+  Braces,
+  Calculator,
+  CalendarClock,
+  Code2,
+  Coffee,
+  Contrast,
+  Database,
+  FileCheck,
+  FileJson,
+  FileType,
+  Fingerprint,
+  Globe,
+  Hash,
+  ImageDown,
+  Link2,
+  ListChecks,
+  ListFilter,
+  LockKeyhole,
+  Network,
+  Paintbrush,
+  Ratio,
+  Scaling,
+  Shrink,
+  SwatchBook,
+  Tags,
+  Terminal,
+  AtSign,
+  MonitorSmartphone,
+  Route,
+  Ruler,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { pageById, REPO_URL, type PageId } from '@/site';
@@ -58,6 +92,40 @@ export const TOOL_ICONS: Record<ToolPageId, typeof Columns2> = {
   'css-gradient': Blend,
   'code-beautifier': Code,
   'markdown-preview': FileText,
+  'uuid-generator': Fingerprint,
+  'hash-generator': Hash,
+  'cron-generator': CalendarClock,
+  'slug-generator': Link2,
+  'number-base-converter': Calculator,
+  'html-entities': Ampersand,
+  'color-palette': SwatchBook,
+  'contrast-checker': Contrast,
+  'aspect-ratio': Ratio,
+  'image-compressor': ImageDown,
+  'image-resizer': Scaling,
+  'favicon-generator': AppWindow,
+  'svg-optimizer': Shrink,
+  'json-to-typescript': Braces,
+  'yaml-validator': FileCheck,
+  'line-cleaner': ListFilter,
+  'list-to-sql': ListChecks,
+  'mock-json': FileJson,
+  'meta-tag-generator': Tags,
+  'robots-txt': Bot,
+  'http-status': Globe,
+  'subnet-calculator': Network,
+  'chmod-calculator': LockKeyhole,
+  'java-beautifier': Coffee,
+  'javascript-beautifier': Code2,
+  'css-beautifier': Paintbrush,
+  'html-beautifier': FileType,
+  'python-formatter': Terminal,
+  'sql-formatter': Database,
+  'xml-formatter': Atom,
+  'px-to-rem': Ruler,
+  'email-extractor': AtSign,
+  'user-agent-parser': MonitorSmartphone,
+  'jsonpath-tester': Route,
   'about': Info,
   contact: Mail,
 };
@@ -65,12 +133,15 @@ export const TOOL_ICONS: Record<ToolPageId, typeof Columns2> = {
 export const TOOL_GROUPS: { label: string; ids: ToolPageId[] }[] = [
   // Within each group, the most searched-for tool comes first
   { label: 'Compare', ids: ['diff-checker', 'json-diff'] },
-  { label: 'JSON', ids: ['json-formatter', 'json-validator', 'json-to-csv', 'json-to-yaml', 'json-viewer'] },
-  { label: 'Encode', ids: ['base64', 'unix-timestamp', 'jwt-decoder', 'url-encoder'] },
-  { label: 'Text', ids: ['word-counter', 'case-converter', 'title-case', 'lorem-ipsum'] },
-  { label: 'Generate', ids: ['qr-code', 'password-generator'] },
-  { label: 'Design', ids: ['color-converter', 'css-gradient'] },
-  { label: 'Code', ids: ['code-beautifier', 'regex-tester', 'markdown-preview'] },
+  { label: 'JSON', ids: ['json-formatter', 'json-validator', 'json-to-csv', 'json-to-yaml', 'json-viewer', 'json-to-typescript', 'yaml-validator', 'jsonpath-tester'] },
+  { label: 'Encode', ids: ['base64', 'unix-timestamp', 'jwt-decoder', 'url-encoder', 'hash-generator', 'number-base-converter', 'html-entities'] },
+  { label: 'Text', ids: ['word-counter', 'case-converter', 'title-case', 'lorem-ipsum', 'line-cleaner', 'slug-generator', 'list-to-sql', 'email-extractor'] },
+  { label: 'Generate', ids: ['qr-code', 'password-generator', 'uuid-generator', 'mock-json'] },
+  { label: 'Design', ids: ['color-converter', 'css-gradient', 'color-palette', 'contrast-checker', 'aspect-ratio', 'px-to-rem'] },
+  { label: 'Image', ids: ['image-compressor', 'image-resizer', 'favicon-generator', 'svg-optimizer'] },
+  { label: 'Web', ids: ['meta-tag-generator', 'robots-txt', 'http-status', 'subnet-calculator', 'user-agent-parser'] },
+  { label: 'Code', ids: ['code-beautifier', 'regex-tester', 'markdown-preview', 'cron-generator', 'chmod-calculator'] },
+  { label: 'Formatters', ids: ['sql-formatter', 'python-formatter', 'javascript-beautifier', 'java-beautifier', 'html-beautifier', 'css-beautifier', 'xml-formatter'] },
   { label: 'Guides', ids: ['guide-compare-json', 'guide-json-to-csv'] },
 ];
 
@@ -86,6 +157,9 @@ export const GROUP_COLORS: Record<string, { text: string; tile: string }> = {
   Generate: { text: 'text-emerald-600 dark:text-emerald-400', tile: 'bg-emerald-100 dark:bg-emerald-500/15' },
   Design: { text: 'text-pink-600 dark:text-pink-400', tile: 'bg-pink-100 dark:bg-pink-500/15' },
   Code: { text: 'text-indigo-600 dark:text-indigo-400', tile: 'bg-indigo-100 dark:bg-indigo-500/15' },
+  Image: { text: 'text-fuchsia-600 dark:text-fuchsia-400', tile: 'bg-fuchsia-100 dark:bg-fuchsia-500/15' },
+  Web: { text: 'text-teal-600 dark:text-teal-400', tile: 'bg-teal-100 dark:bg-teal-500/15' },
+  Formatters: { text: 'text-cyan-600 dark:text-cyan-400', tile: 'bg-cyan-100 dark:bg-cyan-500/15' },
   Guides: { text: 'text-slate-600 dark:text-slate-300', tile: 'bg-slate-100 dark:bg-slate-500/15' },
 };
 
@@ -169,7 +243,7 @@ export function Sidebar({ current }: { current: PageId }) {
   useSidebarScroll(ref, current !== 'home');
   return (
     <aside ref={ref} className="tool-sidebar" aria-label="Tools">
-      <nav className="flex flex-col gap-6">
+      <nav className="flex flex-col gap-6" aria-label="Tools">
         {TOOL_GROUPS.map((group) => (
           <div key={group.label}>
             <p className="mb-1.5 px-2.5 font-mono text-[11.5px] text-faint">{group.label.toLowerCase()}</p>
@@ -243,10 +317,12 @@ export function ToolGuide({
   stepsTitle = 'How it works',
   example,
   mistakes,
+  related,
 }: {
   steps: { title: string; body: string }[];
   faq: { q: string; a: string }[];
   stepsTitle?: string;
+  related?: PageId[];
   example?: { intro: string; inputLabel: string; input: string; outputLabel: string; output: string; note?: string };
   mistakes?: { title: string; body: string }[];
 }) {
@@ -316,6 +392,24 @@ export function ToolGuide({
         </dl>
       </div>
     </section>
+      {related && related.length > 0 && (
+        <nav className="mt-10 border-t pt-8" aria-label="Related tools">
+          <h2 className="text-[15px] font-semibold">Related tools</h2>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {related.map((id) => {
+              const Icon = TOOL_ICONS[id as ToolPageId];
+              return (
+                <li key={id}>
+                  <a href={pageById(id).path} className="inline-flex h-9 items-center gap-2 rounded-lg border bg-card px-3 text-[14px] transition-colors hover:border-foreground/25">
+                    {Icon && <Icon className={cn('size-4', GROUP_COLORS[groupOf(id) ?? 'Guides']?.text)} aria-hidden="true" />}
+                    {pageById(id).name}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      )}
     </>
   );
 }

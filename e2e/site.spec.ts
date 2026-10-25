@@ -28,7 +28,7 @@ test('home page filters tools by category and by text', async ({ page }) => {
   await page.goto('/');
   const grid = page.getByRole('tabpanel');
   await page.getByRole('tab', { name: 'Design' }).click();
-  await expect(grid.getByRole('link')).toHaveCount(2);
+  await expect(grid.getByRole('link')).toHaveCount(6); // converter, gradient, palette, contrast, aspect ratio, px to rem
   await expect(grid).toContainText('Color converter');
   await page.getByRole('tab', { name: 'All' }).click();
   const filter = page.getByRole('searchbox', { name: 'Filter tools' });
@@ -67,12 +67,13 @@ test('the sidebar keeps its scroll position from page to page', async ({ page })
   await sidebar.evaluate((el) => (el.scrollTop = el.scrollHeight));
   const before = await sidebar.evaluate((el) => el.scrollTop);
   expect(before).toBeGreaterThan(100);
-  await sidebar.getByRole('link', { name: 'Markdown preview' }).click();
-  await expect(page).toHaveURL(/\/markdown-preview\/$/);
+  // A link near the bottom, in view without scrolling
+  await sidebar.getByRole('link', { name: 'XML formatter' }).click();
+  await expect(page).toHaveURL(/\/xml-formatter\/$/);
   await page.locator('header[data-ready]').waitFor();
   const after = await page.getByRole('complementary', { name: 'Tools' }).evaluate((el) => el.scrollTop);
   expect(Math.abs(after - before)).toBeLessThan(40);
-  await expect(page.getByRole('complementary', { name: 'Tools' }).getByRole('link', { name: 'Markdown preview' })).toBeInViewport();
+  await expect(page.getByRole('complementary', { name: 'Tools' }).getByRole('link', { name: 'XML formatter' })).toBeInViewport();
 });
 
 

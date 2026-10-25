@@ -1,5 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import { trackErrors, trackOutgoing } from './helpers';
+import { PAGES } from '../src/site';
+
+/** Tool and guide pages (everything but home, about and contact). */
+const TOOLS_AND_GUIDES = PAGES.filter((p) => !['home', 'about', 'contact'].includes(p.id)).length;
 
 /** Text of a CodeMirror editor by its aria-label (all lines are rendered for small documents). */
 async function editorText(page: Page, label: string): Promise<string> {
@@ -26,8 +30,8 @@ for (const tool of TOOLS) {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(tool.h1);
     await expect(page.getByRole('heading', { name: 'How it works' })).toBeVisible();
     // Links to every other page
-    const tools = page.getByRole('navigation', { name: 'Tools' });
-    await expect(tools.getByRole('link')).toHaveCount(23); // every other tool and guide
+    const tools = page.getByRole('navigation', { name: 'Tools', exact: true });
+    await expect(tools.getByRole('link')).toHaveCount(TOOLS_AND_GUIDES + 2); // the sidebar: every tool and guide, All tools, Suggest a tool
     expect(errors).toEqual([]);
   });
 
@@ -156,7 +160,7 @@ test('sidebar links to every tool on desktop, the menu on mobile', async ({ page
   await page.setViewportSize({ width: 390, height: 800 });
   await expect(sidebar).toBeHidden();
   await page.getByRole('button', { name: 'Menu' }).click();
-  await expect(page.getByRole('menuitem')).toHaveCount(28); // 24 tools and guides, home, why free, contact, GitHub
+  await expect(page.getByRole('menuitem')).toHaveCount(TOOLS_AND_GUIDES + 4); // tools and guides, home, why free, contact, GitHub
   await page.getByRole('menuitem', { name: /Diff checker/ }).click();
   await expect(page).toHaveURL(/\/diff-checker\/$/);
 });
