@@ -5,6 +5,7 @@ import HomeApp from '@/home/HomeApp';
 import GuideApp from '@/guides/GuideApp';
 import { GUIDES, type GuideId } from '@/guides/content';
 import ToolApp from '@/tools/ToolApp';
+export { siteFiles, LLMS_FULL_LIMIT } from '@/lib/md/siteFiles';
 
 /**
  * Server render of a page, written into its HTML at build time (see

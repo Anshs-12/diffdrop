@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -5,7 +6,8 @@ import { build, defineConfig, type HtmlTagDescriptor, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { CSP } from './src/csp';
-import { GOOGLE_SITE_VERIFICATION, PAGES, SITE_URL, type Page, type PageId } from './src/site';
+import { CONTACT_EMAIL, GOOGLE_SITE_VERIFICATION, PAGES, REPO_URL, SITE_NAME, SITE_URL, type Page, type PageId } from './src/site';
+import { markdownPath } from './src/lib/md/negotiate';
 import { TOOL_CONTENT } from './src/tools/content';
 import { DIFF_CONTENT } from './src/components/diffContent';
 import { GUIDE_META } from './src/guides/meta';
@@ -52,9 +54,11 @@ const isToolPage = (id: PageId): id is keyof typeof TOOL_CONTENT => id in TOOL_C
 /** The site as an organization, with the square logo search results can show. */
 const ORGANIZATION = {
   '@type': 'Organization',
-  name: 'toolspace',
+  name: SITE_NAME,
   url: `${SITE_URL}/`,
   logo: { '@type': 'ImageObject', url: `${SITE_URL}/icon-512.png`, width: 512, height: 512 },
+  email: CONTACT_EMAIL,
+  sameAs: [REPO_URL],
 };
 
 /** Home → page, for the breadcrumb search results show under the title. */
@@ -134,6 +138,9 @@ function headTags(page: Page): HtmlTagDescriptor[] {
     meta({ name: 'theme-color', media: '(prefers-color-scheme: light)', content: '#fcfcfa' }),
     meta({ name: 'theme-color', media: '(prefers-color-scheme: dark)', content: '#0a0a0a' }),
     meta({ name: 'referrer', content: 'no-referrer' }),
+    // For AI agents: what the page is, and where its markdown version is (served by src/worker.ts)
+    meta({ name: 'ai-summary', content: page.aiSummary ?? page.description }),
+    { tag: 'link', attrs: { rel: 'alternate', type: 'text/markdown', href: `${SITE_URL}${markdownPath(page.path)}` }, injectTo: 'head' },
     ...(page.id === 'home' ? [meta({ name: 'google-site-verification', content: GOOGLE_SITE_VERIFICATION })] : []),
     { tag: 'link', attrs: { rel: 'canonical', href: url }, injectTo: 'head' },
     meta({ property: 'og:site_name', content: 'toolspace' }),
@@ -156,6 +163,8 @@ function headTags(page: Page): HtmlTagDescriptor[] {
     { tag: 'link', attrs: { rel: 'manifest', href: '/site.webmanifest' }, injectTo: 'head' },
     // Applies the saved theme before first paint (plain script from public/)
     { tag: 'script', attrs: { src: '/theme-init.js' }, injectTo: 'head' },
+    // Registers the service worker that makes the site work offline (plain script from public/)
+    { tag: 'script', attrs: { src: '/sw-register.js', defer: true }, injectTo: 'head' },
     // Restores the sidebar's scroll position before the first paint (plain script from public/)
     { tag: 'script', attrs: { src: '/sidebar-scroll.js' }, injectTo: 'body' },
     structuredData(page),
@@ -176,11 +185,7 @@ function pages(): Plugin {
       return headTags(page);
     },
     generateBundle() {
-      this.emitFile({
-        type: 'asset',
-        fileName: 'robots.txt',
-        source: `User-agent: *\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml\n`,
-      });
+      // robots.txt, llms.txt and ai.txt are written by prerender(), from src/lib/md/siteFiles.ts
       const urls = PAGES.map(
         (p) =>
           `  <url>\n    <loc>${SITE_URL}${p.path}</loc>\n    <priority>${p.priority.toFixed(1)}</priority>\n  </url>`,
@@ -192,6 +197,38 @@ function pages(): Plugin {
       });
     },
   };
+}
+
+/** Files bigger than this are cached on first use instead of at install (the code-formatter engines). */
+const PRECACHE_MAX_BYTES = 400 * 1024;
+
+/**
+ * Writes dist/sw.js from scripts/sw.js: every page, the files every page loads,
+ * and the smaller lazily loaded chunks are cached at install, so the site works
+ * offline after one visit. The version is a hash of those files, so each deploy
+ * replaces the old cache.
+ */
+function writeServiceWorker(outDir: string) {
+  const files = new Set<string>(['/404.html']);
+  for (const page of PAGES) {
+    files.add(page.path);
+    const html = fs.readFileSync(path.resolve(outDir, htmlFile(page)), 'utf8');
+    for (const m of html.matchAll(/(?:src|href)="(\/[^"#?]+)"/g)) {
+      if (fs.existsSync(path.join(outDir, m[1]!))) files.add(m[1]!);
+    }
+  }
+  for (const name of fs.readdirSync(path.join(outDir, 'assets'))) {
+    const size = fs.statSync(path.join(outDir, 'assets', name)).size;
+    if (/\.(js|css|woff2)$/.test(name) && size <= PRECACHE_MAX_BYTES) files.add(`/assets/${name}`);
+  }
+  const list = [...files].sort();
+  const hash = crypto.createHash('sha256');
+  for (const f of list) hash.update(f).update(fs.readFileSync(path.join(outDir, f.endsWith('/') ? `${f}index.html` : f)));
+  const template = fs.readFileSync(path.resolve(__dirname, 'scripts/sw.js'), 'utf8');
+  fs.writeFileSync(
+    path.join(outDir, 'sw.js'),
+    template.replace("'__VERSION__'", JSON.stringify(hash.digest('hex').slice(0, 12))).replace('__PRECACHE__', JSON.stringify(list)),
+  );
 }
 
 /**
@@ -218,9 +255,20 @@ function prerender(): Plugin {
         ssr: { noExternal: true },
         build: { ssr: path.resolve(__dirname, 'src/prerender.tsx'), outDir: ssrDir, emptyOutDir: true },
       });
-      const { render } = (await import(pathToFileURL(path.join(ssrDir, 'prerender.js')).href)) as {
+      const { render, siteFiles, LLMS_FULL_LIMIT } = (await import(pathToFileURL(path.join(ssrDir, 'prerender.js')).href)) as {
         render: (page: PageId) => string;
+        siteFiles: (today: string) => Record<string, string>;
+        LLMS_FULL_LIMIT: number;
       };
+      // Markdown of every page, llms.txt, llms-full.txt, ai.txt and robots.txt, from the same content as the pages
+      const files = siteFiles(new Date().toISOString().slice(0, 10));
+      for (const [name, content] of Object.entries(files)) {
+        const file = path.resolve(outDir, name);
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, content);
+      }
+      const full = files['llms-full.txt']!.length;
+      if (full > LLMS_FULL_LIMIT) this.warn(`llms-full.txt is ${full} characters, over the ${LLMS_FULL_LIMIT} agents handle well`);
       for (const page of PAGES) {
         const file = path.resolve(outDir, htmlFile(page));
         const html = fs.readFileSync(file, 'utf8');
@@ -229,6 +277,7 @@ function prerender(): Plugin {
         fs.writeFileSync(file, html.replace(empty, `<div id="root" data-page="${page.id}">${render(page.id)}</div>`));
       }
       fs.rmSync(ssrDir, { recursive: true, force: true });
+      writeServiceWorker(outDir);
     },
   };
 }

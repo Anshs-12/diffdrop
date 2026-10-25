@@ -2,7 +2,7 @@
 
 export type GuideId = 'guide-compare-json' | 'guide-json-to-csv' | 'about' | 'contact';
 
-export const CONTACT_EMAIL = 'anshxcookies@gmail.com';
+export { CONTACT_EMAIL } from '../site';
 
 export const GUIDE_META: Record<GuideId, { h1: string; lede: string; published: string; kind: 'guide' | 'about' | 'contact' }> = {
   'guide-compare-json': {
